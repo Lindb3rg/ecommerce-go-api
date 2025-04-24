@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countCustomerDemographics = `-- name: CountCustomerDemographics :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM customer_demographics
 
 // Counts the total number of customer demographics
 func (q *Queries) CountCustomerDemographics(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomerDemographics)
+	row := q.db.QueryRow(ctx, countCustomerDemographics)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -33,13 +34,13 @@ RETURNING customer_type_id, customer_desc
 `
 
 type CreateCustomerDemographicParams struct {
-	CustomerTypeID interface{}    `json:"customer_type_id"`
-	CustomerDesc   sql.NullString `json:"customer_desc"`
+	CustomerTypeID interface{} `json:"customer_type_id"`
+	CustomerDesc   pgtype.Text `json:"customer_desc"`
 }
 
 // Creates a new customer demographic and returns it
 func (q *Queries) CreateCustomerDemographic(ctx context.Context, arg CreateCustomerDemographicParams) (CustomerDemographic, error) {
-	row := q.db.QueryRowContext(ctx, createCustomerDemographic, arg.CustomerTypeID, arg.CustomerDesc)
+	row := q.db.QueryRow(ctx, createCustomerDemographic, arg.CustomerTypeID, arg.CustomerDesc)
 	var i CustomerDemographic
 	err := row.Scan(&i.CustomerTypeID, &i.CustomerDesc)
 	return i, err
@@ -52,7 +53,7 @@ WHERE customer_type_id = $1
 
 // Deletes a customer demographic by type ID
 func (q *Queries) DeleteCustomerDemographic(ctx context.Context, customerTypeID interface{}) error {
-	_, err := q.db.ExecContext(ctx, deleteCustomerDemographic, customerTypeID)
+	_, err := q.db.Exec(ctx, deleteCustomerDemographic, customerTypeID)
 	return err
 }
 
@@ -64,7 +65,7 @@ WHERE customer_type_id = $1
 
 // Gets a customer demographic by type ID
 func (q *Queries) GetCustomerDemographic(ctx context.Context, customerTypeID interface{}) (CustomerDemographic, error) {
-	row := q.db.QueryRowContext(ctx, getCustomerDemographic, customerTypeID)
+	row := q.db.QueryRow(ctx, getCustomerDemographic, customerTypeID)
 	var i CustomerDemographic
 	err := row.Scan(&i.CustomerTypeID, &i.CustomerDesc)
 	return i, err
@@ -78,7 +79,7 @@ ORDER BY customer_type_id
 
 // Lists all customer demographics
 func (q *Queries) ListCustomerDemographics(ctx context.Context) ([]CustomerDemographic, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerDemographics)
+	rows, err := q.db.Query(ctx, listCustomerDemographics)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +91,6 @@ func (q *Queries) ListCustomerDemographics(ctx context.Context) ([]CustomerDemog
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -108,8 +106,8 @@ ORDER BY customer_type_id
 `
 
 // Searches customer demographics by description (case insensitive)
-func (q *Queries) SearchCustomerDemographicsByDesc(ctx context.Context, dollar_1 sql.NullString) ([]CustomerDemographic, error) {
-	rows, err := q.db.QueryContext(ctx, searchCustomerDemographicsByDesc, dollar_1)
+func (q *Queries) SearchCustomerDemographicsByDesc(ctx context.Context, dollar_1 pgtype.Text) ([]CustomerDemographic, error) {
+	rows, err := q.db.Query(ctx, searchCustomerDemographicsByDesc, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -121,9 +119,6 @@ func (q *Queries) SearchCustomerDemographicsByDesc(ctx context.Context, dollar_1
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -140,13 +135,13 @@ RETURNING customer_type_id, customer_desc
 `
 
 type UpdateCustomerDemographicParams struct {
-	CustomerTypeID interface{}    `json:"customer_type_id"`
-	CustomerDesc   sql.NullString `json:"customer_desc"`
+	CustomerTypeID interface{} `json:"customer_type_id"`
+	CustomerDesc   pgtype.Text `json:"customer_desc"`
 }
 
 // Updates a customer demographic by type ID
 func (q *Queries) UpdateCustomerDemographic(ctx context.Context, arg UpdateCustomerDemographicParams) (CustomerDemographic, error) {
-	row := q.db.QueryRowContext(ctx, updateCustomerDemographic, arg.CustomerTypeID, arg.CustomerDesc)
+	row := q.db.QueryRow(ctx, updateCustomerDemographic, arg.CustomerTypeID, arg.CustomerDesc)
 	var i CustomerDemographic
 	err := row.Scan(&i.CustomerTypeID, &i.CustomerDesc)
 	return i, err

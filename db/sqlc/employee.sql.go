@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countEmployees = `-- name: CountEmployees :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM employees
 
 // Counts the total number of employees
 func (q *Queries) CountEmployees(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countEmployees)
+	row := q.db.QueryRow(ctx, countEmployees)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -43,7 +44,7 @@ type CountEmployeesByManagerRow struct {
 
 // Counts direct reports for each manager
 func (q *Queries) CountEmployeesByManager(ctx context.Context) ([]CountEmployeesByManagerRow, error) {
-	rows, err := q.db.QueryContext(ctx, countEmployeesByManager)
+	rows, err := q.db.Query(ctx, countEmployeesByManager)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +61,6 @@ func (q *Queries) CountEmployeesByManager(ctx context.Context) ([]CountEmployees
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -96,28 +94,28 @@ RETURNING employee_id, last_name, first_name, title, title_of_courtesy, birth_da
 `
 
 type CreateEmployeeParams struct {
-	LastName        string         `json:"last_name"`
-	FirstName       string         `json:"first_name"`
-	Title           sql.NullString `json:"title"`
-	TitleOfCourtesy sql.NullString `json:"title_of_courtesy"`
-	BirthDate       sql.NullTime   `json:"birth_date"`
-	HireDate        sql.NullTime   `json:"hire_date"`
-	Address         sql.NullString `json:"address"`
-	City            sql.NullString `json:"city"`
-	Region          sql.NullString `json:"region"`
-	PostalCode      sql.NullString `json:"postal_code"`
-	Country         sql.NullString `json:"country"`
-	HomePhone       sql.NullString `json:"home_phone"`
-	Extension       sql.NullString `json:"extension"`
-	Photo           []byte         `json:"photo"`
-	Notes           sql.NullString `json:"notes"`
-	ReportsTo       sql.NullInt16  `json:"reports_to"`
-	PhotoPath       sql.NullString `json:"photo_path"`
+	LastName        string      `json:"last_name"`
+	FirstName       string      `json:"first_name"`
+	Title           pgtype.Text `json:"title"`
+	TitleOfCourtesy pgtype.Text `json:"title_of_courtesy"`
+	BirthDate       pgtype.Date `json:"birth_date"`
+	HireDate        pgtype.Date `json:"hire_date"`
+	Address         pgtype.Text `json:"address"`
+	City            pgtype.Text `json:"city"`
+	Region          pgtype.Text `json:"region"`
+	PostalCode      pgtype.Text `json:"postal_code"`
+	Country         pgtype.Text `json:"country"`
+	HomePhone       pgtype.Text `json:"home_phone"`
+	Extension       pgtype.Text `json:"extension"`
+	Photo           []byte      `json:"photo"`
+	Notes           pgtype.Text `json:"notes"`
+	ReportsTo       pgtype.Int2 `json:"reports_to"`
+	PhotoPath       pgtype.Text `json:"photo_path"`
 }
 
 // Creates a new employee and returns it
 func (q *Queries) CreateEmployee(ctx context.Context, arg CreateEmployeeParams) (Employee, error) {
-	row := q.db.QueryRowContext(ctx, createEmployee,
+	row := q.db.QueryRow(ctx, createEmployee,
 		arg.LastName,
 		arg.FirstName,
 		arg.Title,
@@ -167,7 +165,7 @@ WHERE employee_id = $1
 
 // Deletes an employee by ID
 func (q *Queries) DeleteEmployee(ctx context.Context, employeeID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteEmployee, employeeID)
+	_, err := q.db.Exec(ctx, deleteEmployee, employeeID)
 	return err
 }
 
@@ -179,7 +177,7 @@ WHERE employee_id = $1
 
 // Gets an employee by ID
 func (q *Queries) GetEmployee(ctx context.Context, employeeID int16) (Employee, error) {
-	row := q.db.QueryRowContext(ctx, getEmployee, employeeID)
+	row := q.db.QueryRow(ctx, getEmployee, employeeID)
 	var i Employee
 	err := row.Scan(
 		&i.EmployeeID,
@@ -240,17 +238,17 @@ ORDER BY level
 `
 
 type GetEmployeeHierarchyRow struct {
-	EmployeeID int16          `json:"employee_id"`
-	LastName   string         `json:"last_name"`
-	FirstName  string         `json:"first_name"`
-	Title      sql.NullString `json:"title"`
-	ReportsTo  sql.NullInt16  `json:"reports_to"`
-	Level      int32          `json:"level"`
+	EmployeeID int16       `json:"employee_id"`
+	LastName   string      `json:"last_name"`
+	FirstName  string      `json:"first_name"`
+	Title      pgtype.Text `json:"title"`
+	ReportsTo  pgtype.Int2 `json:"reports_to"`
+	Level      int32       `json:"level"`
 }
 
 // Gets the entire reporting hierarchy for an employee
 func (q *Queries) GetEmployeeHierarchy(ctx context.Context, employeeID int16) ([]GetEmployeeHierarchyRow, error) {
-	rows, err := q.db.QueryContext(ctx, getEmployeeHierarchy, employeeID)
+	rows, err := q.db.Query(ctx, getEmployeeHierarchy, employeeID)
 	if err != nil {
 		return nil, err
 	}
@@ -269,9 +267,6 @@ func (q *Queries) GetEmployeeHierarchy(ctx context.Context, employeeID int16) ([
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -309,33 +304,33 @@ WHERE e.employee_id = $1
 `
 
 type GetEmployeeWithManagerRow struct {
-	EmployeeID       int16          `json:"employee_id"`
-	LastName         string         `json:"last_name"`
-	FirstName        string         `json:"first_name"`
-	Title            sql.NullString `json:"title"`
-	TitleOfCourtesy  sql.NullString `json:"title_of_courtesy"`
-	BirthDate        sql.NullTime   `json:"birth_date"`
-	HireDate         sql.NullTime   `json:"hire_date"`
-	Address          sql.NullString `json:"address"`
-	City             sql.NullString `json:"city"`
-	Region           sql.NullString `json:"region"`
-	PostalCode       sql.NullString `json:"postal_code"`
-	Country          sql.NullString `json:"country"`
-	HomePhone        sql.NullString `json:"home_phone"`
-	Extension        sql.NullString `json:"extension"`
-	Photo            []byte         `json:"photo"`
-	Notes            sql.NullString `json:"notes"`
-	ReportsTo        sql.NullInt16  `json:"reports_to"`
-	PhotoPath        sql.NullString `json:"photo_path"`
-	ManagerID        sql.NullInt16  `json:"manager_id"`
-	ManagerLastName  sql.NullString `json:"manager_last_name"`
-	ManagerFirstName sql.NullString `json:"manager_first_name"`
-	ManagerTitle     sql.NullString `json:"manager_title"`
+	EmployeeID       int16       `json:"employee_id"`
+	LastName         string      `json:"last_name"`
+	FirstName        string      `json:"first_name"`
+	Title            pgtype.Text `json:"title"`
+	TitleOfCourtesy  pgtype.Text `json:"title_of_courtesy"`
+	BirthDate        pgtype.Date `json:"birth_date"`
+	HireDate         pgtype.Date `json:"hire_date"`
+	Address          pgtype.Text `json:"address"`
+	City             pgtype.Text `json:"city"`
+	Region           pgtype.Text `json:"region"`
+	PostalCode       pgtype.Text `json:"postal_code"`
+	Country          pgtype.Text `json:"country"`
+	HomePhone        pgtype.Text `json:"home_phone"`
+	Extension        pgtype.Text `json:"extension"`
+	Photo            []byte      `json:"photo"`
+	Notes            pgtype.Text `json:"notes"`
+	ReportsTo        pgtype.Int2 `json:"reports_to"`
+	PhotoPath        pgtype.Text `json:"photo_path"`
+	ManagerID        pgtype.Int2 `json:"manager_id"`
+	ManagerLastName  pgtype.Text `json:"manager_last_name"`
+	ManagerFirstName pgtype.Text `json:"manager_first_name"`
+	ManagerTitle     pgtype.Text `json:"manager_title"`
 }
 
 // Gets an employee by ID along with their manager's details
 func (q *Queries) GetEmployeeWithManager(ctx context.Context, employeeID int16) (GetEmployeeWithManagerRow, error) {
-	row := q.db.QueryRowContext(ctx, getEmployeeWithManager, employeeID)
+	row := q.db.QueryRow(ctx, getEmployeeWithManager, employeeID)
 	var i GetEmployeeWithManagerRow
 	err := row.Scan(
 		&i.EmployeeID,
@@ -372,7 +367,7 @@ ORDER BY last_name, first_name
 
 // Lists all employees
 func (q *Queries) ListEmployees(ctx context.Context) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployees)
+	rows, err := q.db.Query(ctx, listEmployees)
 	if err != nil {
 		return nil, err
 	}
@@ -403,9 +398,6 @@ func (q *Queries) ListEmployees(ctx context.Context) ([]Employee, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -421,8 +413,8 @@ ORDER BY last_name, first_name
 `
 
 // Lists all employees from a specific country
-func (q *Queries) ListEmployeesByCountry(ctx context.Context, country sql.NullString) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployeesByCountry, country)
+func (q *Queries) ListEmployeesByCountry(ctx context.Context, country pgtype.Text) ([]Employee, error) {
+	rows, err := q.db.Query(ctx, listEmployeesByCountry, country)
 	if err != nil {
 		return nil, err
 	}
@@ -453,9 +445,6 @@ func (q *Queries) ListEmployeesByCountry(ctx context.Context, country sql.NullSt
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -471,8 +460,8 @@ ORDER BY last_name, first_name
 `
 
 // Lists all employees that report to a specific manager
-func (q *Queries) ListEmployeesByManager(ctx context.Context, reportsTo sql.NullInt16) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployeesByManager, reportsTo)
+func (q *Queries) ListEmployeesByManager(ctx context.Context, reportsTo pgtype.Int2) ([]Employee, error) {
+	rows, err := q.db.Query(ctx, listEmployeesByManager, reportsTo)
 	if err != nil {
 		return nil, err
 	}
@@ -503,9 +492,6 @@ func (q *Queries) ListEmployeesByManager(ctx context.Context, reportsTo sql.Null
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -521,8 +507,8 @@ ORDER BY last_name, first_name
 `
 
 // Lists all employees with a specific title
-func (q *Queries) ListEmployeesByTitle(ctx context.Context, title sql.NullString) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployeesByTitle, title)
+func (q *Queries) ListEmployeesByTitle(ctx context.Context, title pgtype.Text) ([]Employee, error) {
+	rows, err := q.db.Query(ctx, listEmployeesByTitle, title)
 	if err != nil {
 		return nil, err
 	}
@@ -553,9 +539,6 @@ func (q *Queries) ListEmployeesByTitle(ctx context.Context, title sql.NullString
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -571,8 +554,8 @@ ORDER BY last_name, first_name
 `
 
 // Searches employees by first or last name (case insensitive)
-func (q *Queries) SearchEmployeesByName(ctx context.Context, dollar_1 sql.NullString) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, searchEmployeesByName, dollar_1)
+func (q *Queries) SearchEmployeesByName(ctx context.Context, dollar_1 pgtype.Text) ([]Employee, error) {
+	rows, err := q.db.Query(ctx, searchEmployeesByName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -603,9 +586,6 @@ func (q *Queries) SearchEmployeesByName(ctx context.Context, dollar_1 sql.NullSt
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -638,29 +618,29 @@ RETURNING employee_id, last_name, first_name, title, title_of_courtesy, birth_da
 `
 
 type UpdateEmployeeParams struct {
-	EmployeeID      int16          `json:"employee_id"`
-	LastName        string         `json:"last_name"`
-	FirstName       string         `json:"first_name"`
-	Title           sql.NullString `json:"title"`
-	TitleOfCourtesy sql.NullString `json:"title_of_courtesy"`
-	BirthDate       sql.NullTime   `json:"birth_date"`
-	HireDate        sql.NullTime   `json:"hire_date"`
-	Address         sql.NullString `json:"address"`
-	City            sql.NullString `json:"city"`
-	Region          sql.NullString `json:"region"`
-	PostalCode      sql.NullString `json:"postal_code"`
-	Country         sql.NullString `json:"country"`
-	HomePhone       sql.NullString `json:"home_phone"`
-	Extension       sql.NullString `json:"extension"`
-	Photo           []byte         `json:"photo"`
-	Notes           sql.NullString `json:"notes"`
-	ReportsTo       sql.NullInt16  `json:"reports_to"`
-	PhotoPath       sql.NullString `json:"photo_path"`
+	EmployeeID      int16       `json:"employee_id"`
+	LastName        string      `json:"last_name"`
+	FirstName       string      `json:"first_name"`
+	Title           pgtype.Text `json:"title"`
+	TitleOfCourtesy pgtype.Text `json:"title_of_courtesy"`
+	BirthDate       pgtype.Date `json:"birth_date"`
+	HireDate        pgtype.Date `json:"hire_date"`
+	Address         pgtype.Text `json:"address"`
+	City            pgtype.Text `json:"city"`
+	Region          pgtype.Text `json:"region"`
+	PostalCode      pgtype.Text `json:"postal_code"`
+	Country         pgtype.Text `json:"country"`
+	HomePhone       pgtype.Text `json:"home_phone"`
+	Extension       pgtype.Text `json:"extension"`
+	Photo           []byte      `json:"photo"`
+	Notes           pgtype.Text `json:"notes"`
+	ReportsTo       pgtype.Int2 `json:"reports_to"`
+	PhotoPath       pgtype.Text `json:"photo_path"`
 }
 
 // Updates an employee by ID
 func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) (Employee, error) {
-	row := q.db.QueryRowContext(ctx, updateEmployee,
+	row := q.db.QueryRow(ctx, updateEmployee,
 		arg.EmployeeID,
 		arg.LastName,
 		arg.FirstName,

@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countProducts = `-- name: CountProducts :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM products
 
 // Counts the total number of products
 func (q *Queries) CountProducts(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countProducts)
+	row := q.db.QueryRow(ctx, countProducts)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -41,7 +42,7 @@ type CountProductsByCategoryRow struct {
 
 // Counts products grouped by category
 func (q *Queries) CountProductsByCategory(ctx context.Context) ([]CountProductsByCategoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, countProductsByCategory)
+	rows, err := q.db.Query(ctx, countProductsByCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +54,6 @@ func (q *Queries) CountProductsByCategory(ctx context.Context) ([]CountProductsB
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -82,7 +80,7 @@ type CountProductsBySupplierRow struct {
 
 // Counts products grouped by supplier
 func (q *Queries) CountProductsBySupplier(ctx context.Context) ([]CountProductsBySupplierRow, error) {
-	rows, err := q.db.QueryContext(ctx, countProductsBySupplier)
+	rows, err := q.db.Query(ctx, countProductsBySupplier)
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +92,6 @@ func (q *Queries) CountProductsBySupplier(ctx context.Context) ([]CountProductsB
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -122,20 +117,20 @@ RETURNING product_id, product_name, supplier_id, category_id, quantity_per_unit,
 `
 
 type CreateProductParams struct {
-	ProductName     string          `json:"product_name"`
-	SupplierID      sql.NullInt16   `json:"supplier_id"`
-	CategoryID      sql.NullInt16   `json:"category_id"`
-	QuantityPerUnit sql.NullString  `json:"quantity_per_unit"`
-	UnitPrice       sql.NullFloat64 `json:"unit_price"`
-	UnitsInStock    sql.NullInt16   `json:"units_in_stock"`
-	UnitsOnOrder    sql.NullInt16   `json:"units_on_order"`
-	ReorderLevel    sql.NullInt16   `json:"reorder_level"`
-	Discontinued    int32           `json:"discontinued"`
+	ProductName     string        `json:"product_name"`
+	SupplierID      pgtype.Int2   `json:"supplier_id"`
+	CategoryID      pgtype.Int2   `json:"category_id"`
+	QuantityPerUnit pgtype.Text   `json:"quantity_per_unit"`
+	UnitPrice       pgtype.Float4 `json:"unit_price"`
+	UnitsInStock    pgtype.Int2   `json:"units_in_stock"`
+	UnitsOnOrder    pgtype.Int2   `json:"units_on_order"`
+	ReorderLevel    pgtype.Int2   `json:"reorder_level"`
+	Discontinued    int32         `json:"discontinued"`
 }
 
 // Creates a new product and returns it
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
-	row := q.db.QueryRowContext(ctx, createProduct,
+	row := q.db.QueryRow(ctx, createProduct,
 		arg.ProductName,
 		arg.SupplierID,
 		arg.CategoryID,
@@ -169,7 +164,7 @@ WHERE product_id = $1
 
 // Deletes a product by ID
 func (q *Queries) DeleteProduct(ctx context.Context, productID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteProduct, productID)
+	_, err := q.db.Exec(ctx, deleteProduct, productID)
 	return err
 }
 
@@ -183,7 +178,7 @@ RETURNING product_id, product_name, supplier_id, category_id, quantity_per_unit,
 
 // Marks a product as discontinued
 func (q *Queries) DiscontinueProduct(ctx context.Context, productID int16) (Product, error) {
-	row := q.db.QueryRowContext(ctx, discontinueProduct, productID)
+	row := q.db.QueryRow(ctx, discontinueProduct, productID)
 	var i Product
 	err := row.Scan(
 		&i.ProductID,
@@ -208,7 +203,7 @@ WHERE product_id = $1
 
 // Gets a product by ID
 func (q *Queries) GetProduct(ctx context.Context, productID int16) (Product, error) {
-	row := q.db.QueryRowContext(ctx, getProduct, productID)
+	row := q.db.QueryRow(ctx, getProduct, productID)
 	var i Product
 	err := row.Scan(
 		&i.ProductID,
@@ -244,7 +239,7 @@ type GetProductValueByCategoryRow struct {
 
 // Gets the total inventory value by category
 func (q *Queries) GetProductValueByCategory(ctx context.Context) ([]GetProductValueByCategoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, getProductValueByCategory)
+	rows, err := q.db.Query(ctx, getProductValueByCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -256,9 +251,6 @@ func (q *Queries) GetProductValueByCategory(ctx context.Context) ([]GetProductVa
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -290,26 +282,26 @@ WHERE p.product_id = $1
 `
 
 type GetProductWithDetailsRow struct {
-	ProductID           int16           `json:"product_id"`
-	ProductName         string          `json:"product_name"`
-	SupplierID          sql.NullInt16   `json:"supplier_id"`
-	CategoryID          sql.NullInt16   `json:"category_id"`
-	QuantityPerUnit     sql.NullString  `json:"quantity_per_unit"`
-	UnitPrice           sql.NullFloat64 `json:"unit_price"`
-	UnitsInStock        sql.NullInt16   `json:"units_in_stock"`
-	UnitsOnOrder        sql.NullInt16   `json:"units_on_order"`
-	ReorderLevel        sql.NullInt16   `json:"reorder_level"`
-	Discontinued        int32           `json:"discontinued"`
-	CategoryName        sql.NullString  `json:"category_name"`
-	CategoryDescription sql.NullString  `json:"category_description"`
-	SupplierName        sql.NullString  `json:"supplier_name"`
-	SupplierContact     sql.NullString  `json:"supplier_contact"`
-	SupplierCountry     sql.NullString  `json:"supplier_country"`
+	ProductID           int16         `json:"product_id"`
+	ProductName         string        `json:"product_name"`
+	SupplierID          pgtype.Int2   `json:"supplier_id"`
+	CategoryID          pgtype.Int2   `json:"category_id"`
+	QuantityPerUnit     pgtype.Text   `json:"quantity_per_unit"`
+	UnitPrice           pgtype.Float4 `json:"unit_price"`
+	UnitsInStock        pgtype.Int2   `json:"units_in_stock"`
+	UnitsOnOrder        pgtype.Int2   `json:"units_on_order"`
+	ReorderLevel        pgtype.Int2   `json:"reorder_level"`
+	Discontinued        int32         `json:"discontinued"`
+	CategoryName        pgtype.Text   `json:"category_name"`
+	CategoryDescription pgtype.Text   `json:"category_description"`
+	SupplierName        pgtype.Text   `json:"supplier_name"`
+	SupplierContact     pgtype.Text   `json:"supplier_contact"`
+	SupplierCountry     pgtype.Text   `json:"supplier_country"`
 }
 
 // Gets a product by ID with category and supplier details
 func (q *Queries) GetProductWithDetails(ctx context.Context, productID int16) (GetProductWithDetailsRow, error) {
-	row := q.db.QueryRowContext(ctx, getProductWithDetails, productID)
+	row := q.db.QueryRow(ctx, getProductWithDetails, productID)
 	var i GetProductWithDetailsRow
 	err := row.Scan(
 		&i.ProductID,
@@ -340,7 +332,7 @@ ORDER BY product_name
 
 // Lists all discontinued products
 func (q *Queries) ListDiscontinuedProducts(ctx context.Context) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, listDiscontinuedProducts)
+	rows, err := q.db.Query(ctx, listDiscontinuedProducts)
 	if err != nil {
 		return nil, err
 	}
@@ -363,9 +355,6 @@ func (q *Queries) ListDiscontinuedProducts(ctx context.Context) ([]Product, erro
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -381,7 +370,7 @@ ORDER BY product_name
 
 // Lists all products
 func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, listProducts)
+	rows, err := q.db.Query(ctx, listProducts)
 	if err != nil {
 		return nil, err
 	}
@@ -404,9 +393,6 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -422,8 +408,8 @@ ORDER BY product_name
 `
 
 // Lists all products in a specific category
-func (q *Queries) ListProductsByCategory(ctx context.Context, categoryID sql.NullInt16) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, listProductsByCategory, categoryID)
+func (q *Queries) ListProductsByCategory(ctx context.Context, categoryID pgtype.Int2) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listProductsByCategory, categoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -446,9 +432,6 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, categoryID sql.Nul
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -464,8 +447,8 @@ ORDER BY product_name
 `
 
 // Lists all products from a specific supplier
-func (q *Queries) ListProductsBySupplier(ctx context.Context, supplierID sql.NullInt16) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, listProductsBySupplier, supplierID)
+func (q *Queries) ListProductsBySupplier(ctx context.Context, supplierID pgtype.Int2) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listProductsBySupplier, supplierID)
 	if err != nil {
 		return nil, err
 	}
@@ -488,9 +471,6 @@ func (q *Queries) ListProductsBySupplier(ctx context.Context, supplierID sql.Nul
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -507,7 +487,7 @@ ORDER BY product_name
 
 // Lists all products that need to be reordered (stock below reorder level)
 func (q *Queries) ListProductsNeedingReorder(ctx context.Context) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, listProductsNeedingReorder)
+	rows, err := q.db.Query(ctx, listProductsNeedingReorder)
 	if err != nil {
 		return nil, err
 	}
@@ -530,9 +510,6 @@ func (q *Queries) ListProductsNeedingReorder(ctx context.Context) ([]Product, er
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -561,23 +538,23 @@ ORDER BY p.product_name
 `
 
 type ListProductsWithDetailsRow struct {
-	ProductID       int16           `json:"product_id"`
-	ProductName     string          `json:"product_name"`
-	SupplierID      sql.NullInt16   `json:"supplier_id"`
-	CategoryID      sql.NullInt16   `json:"category_id"`
-	QuantityPerUnit sql.NullString  `json:"quantity_per_unit"`
-	UnitPrice       sql.NullFloat64 `json:"unit_price"`
-	UnitsInStock    sql.NullInt16   `json:"units_in_stock"`
-	UnitsOnOrder    sql.NullInt16   `json:"units_on_order"`
-	ReorderLevel    sql.NullInt16   `json:"reorder_level"`
-	Discontinued    int32           `json:"discontinued"`
-	CategoryName    sql.NullString  `json:"category_name"`
-	SupplierName    sql.NullString  `json:"supplier_name"`
+	ProductID       int16         `json:"product_id"`
+	ProductName     string        `json:"product_name"`
+	SupplierID      pgtype.Int2   `json:"supplier_id"`
+	CategoryID      pgtype.Int2   `json:"category_id"`
+	QuantityPerUnit pgtype.Text   `json:"quantity_per_unit"`
+	UnitPrice       pgtype.Float4 `json:"unit_price"`
+	UnitsInStock    pgtype.Int2   `json:"units_in_stock"`
+	UnitsOnOrder    pgtype.Int2   `json:"units_on_order"`
+	ReorderLevel    pgtype.Int2   `json:"reorder_level"`
+	Discontinued    int32         `json:"discontinued"`
+	CategoryName    pgtype.Text   `json:"category_name"`
+	SupplierName    pgtype.Text   `json:"supplier_name"`
 }
 
 // Lists all products with category and supplier details
 func (q *Queries) ListProductsWithDetails(ctx context.Context) ([]ListProductsWithDetailsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProductsWithDetails)
+	rows, err := q.db.Query(ctx, listProductsWithDetails)
 	if err != nil {
 		return nil, err
 	}
@@ -603,9 +580,6 @@ func (q *Queries) ListProductsWithDetails(ctx context.Context) ([]ListProductsWi
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -620,8 +594,8 @@ ORDER BY product_name
 `
 
 // Searches products by name (case insensitive)
-func (q *Queries) SearchProductsByName(ctx context.Context, dollar_1 sql.NullString) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, searchProductsByName, dollar_1)
+func (q *Queries) SearchProductsByName(ctx context.Context, dollar_1 pgtype.Text) ([]Product, error) {
+	rows, err := q.db.Query(ctx, searchProductsByName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -644,9 +618,6 @@ func (q *Queries) SearchProductsByName(ctx context.Context, dollar_1 sql.NullStr
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -671,21 +642,21 @@ RETURNING product_id, product_name, supplier_id, category_id, quantity_per_unit,
 `
 
 type UpdateProductParams struct {
-	ProductID       int16           `json:"product_id"`
-	ProductName     string          `json:"product_name"`
-	SupplierID      sql.NullInt16   `json:"supplier_id"`
-	CategoryID      sql.NullInt16   `json:"category_id"`
-	QuantityPerUnit sql.NullString  `json:"quantity_per_unit"`
-	UnitPrice       sql.NullFloat64 `json:"unit_price"`
-	UnitsInStock    sql.NullInt16   `json:"units_in_stock"`
-	UnitsOnOrder    sql.NullInt16   `json:"units_on_order"`
-	ReorderLevel    sql.NullInt16   `json:"reorder_level"`
-	Discontinued    int32           `json:"discontinued"`
+	ProductID       int16         `json:"product_id"`
+	ProductName     string        `json:"product_name"`
+	SupplierID      pgtype.Int2   `json:"supplier_id"`
+	CategoryID      pgtype.Int2   `json:"category_id"`
+	QuantityPerUnit pgtype.Text   `json:"quantity_per_unit"`
+	UnitPrice       pgtype.Float4 `json:"unit_price"`
+	UnitsInStock    pgtype.Int2   `json:"units_in_stock"`
+	UnitsOnOrder    pgtype.Int2   `json:"units_on_order"`
+	ReorderLevel    pgtype.Int2   `json:"reorder_level"`
+	Discontinued    int32         `json:"discontinued"`
 }
 
 // Updates a product by ID
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
-	row := q.db.QueryRowContext(ctx, updateProduct,
+	row := q.db.QueryRow(ctx, updateProduct,
 		arg.ProductID,
 		arg.ProductName,
 		arg.SupplierID,
@@ -722,13 +693,13 @@ RETURNING product_id, product_name, supplier_id, category_id, quantity_per_unit,
 `
 
 type UpdateProductPriceParams struct {
-	ProductID int16           `json:"product_id"`
-	UnitPrice sql.NullFloat64 `json:"unit_price"`
+	ProductID int16         `json:"product_id"`
+	UnitPrice pgtype.Float4 `json:"unit_price"`
 }
 
 // Updates a product's price
 func (q *Queries) UpdateProductPrice(ctx context.Context, arg UpdateProductPriceParams) (Product, error) {
-	row := q.db.QueryRowContext(ctx, updateProductPrice, arg.ProductID, arg.UnitPrice)
+	row := q.db.QueryRow(ctx, updateProductPrice, arg.ProductID, arg.UnitPrice)
 	var i Product
 	err := row.Scan(
 		&i.ProductID,
@@ -755,14 +726,14 @@ RETURNING product_id, product_name, supplier_id, category_id, quantity_per_unit,
 `
 
 type UpdateProductStockParams struct {
-	ProductID    int16         `json:"product_id"`
-	UnitsInStock sql.NullInt16 `json:"units_in_stock"`
-	UnitsOnOrder sql.NullInt16 `json:"units_on_order"`
+	ProductID    int16       `json:"product_id"`
+	UnitsInStock pgtype.Int2 `json:"units_in_stock"`
+	UnitsOnOrder pgtype.Int2 `json:"units_on_order"`
 }
 
 // Updates a product's stock levels
 func (q *Queries) UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) (Product, error) {
-	row := q.db.QueryRowContext(ctx, updateProductStock, arg.ProductID, arg.UnitsInStock, arg.UnitsOnOrder)
+	row := q.db.QueryRow(ctx, updateProductStock, arg.ProductID, arg.UnitsInStock, arg.UnitsOnOrder)
 	var i Product
 	err := row.Scan(
 		&i.ProductID,

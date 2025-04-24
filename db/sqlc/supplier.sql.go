@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countSuppliers = `-- name: CountSuppliers :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM suppliers
 
 // Counts the total number of suppliers
 func (q *Queries) CountSuppliers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countSuppliers)
+	row := q.db.QueryRow(ctx, countSuppliers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -30,13 +31,13 @@ ORDER BY COUNT(*) DESC
 `
 
 type CountSuppliersByCountryRow struct {
-	Country       sql.NullString `json:"country"`
-	SupplierCount int64          `json:"supplier_count"`
+	Country       pgtype.Text `json:"country"`
+	SupplierCount int64       `json:"supplier_count"`
 }
 
 // Counts suppliers grouped by country
 func (q *Queries) CountSuppliersByCountry(ctx context.Context) ([]CountSuppliersByCountryRow, error) {
-	rows, err := q.db.QueryContext(ctx, countSuppliersByCountry)
+	rows, err := q.db.Query(ctx, countSuppliersByCountry)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +49,6 @@ func (q *Queries) CountSuppliersByCountry(ctx context.Context) ([]CountSuppliers
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -78,22 +76,22 @@ RETURNING supplier_id, company_name, contact_name, contact_title, address, city,
 `
 
 type CreateSupplierParams struct {
-	CompanyName  string         `json:"company_name"`
-	ContactName  sql.NullString `json:"contact_name"`
-	ContactTitle sql.NullString `json:"contact_title"`
-	Address      sql.NullString `json:"address"`
-	City         sql.NullString `json:"city"`
-	Region       sql.NullString `json:"region"`
-	PostalCode   sql.NullString `json:"postal_code"`
-	Country      sql.NullString `json:"country"`
-	Phone        sql.NullString `json:"phone"`
-	Fax          sql.NullString `json:"fax"`
-	Homepage     sql.NullString `json:"homepage"`
+	CompanyName  string      `json:"company_name"`
+	ContactName  pgtype.Text `json:"contact_name"`
+	ContactTitle pgtype.Text `json:"contact_title"`
+	Address      pgtype.Text `json:"address"`
+	City         pgtype.Text `json:"city"`
+	Region       pgtype.Text `json:"region"`
+	PostalCode   pgtype.Text `json:"postal_code"`
+	Country      pgtype.Text `json:"country"`
+	Phone        pgtype.Text `json:"phone"`
+	Fax          pgtype.Text `json:"fax"`
+	Homepage     pgtype.Text `json:"homepage"`
 }
 
 // Creates a new supplier and returns it
 func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) (Supplier, error) {
-	row := q.db.QueryRowContext(ctx, createSupplier,
+	row := q.db.QueryRow(ctx, createSupplier,
 		arg.CompanyName,
 		arg.ContactName,
 		arg.ContactTitle,
@@ -131,7 +129,7 @@ WHERE supplier_id = $1
 
 // Deletes a supplier by ID
 func (q *Queries) DeleteSupplier(ctx context.Context, supplierID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteSupplier, supplierID)
+	_, err := q.db.Exec(ctx, deleteSupplier, supplierID)
 	return err
 }
 
@@ -143,7 +141,7 @@ WHERE supplier_id = $1
 
 // Gets a supplier by ID
 func (q *Queries) GetSupplier(ctx context.Context, supplierID int16) (Supplier, error) {
-	row := q.db.QueryRowContext(ctx, getSupplier, supplierID)
+	row := q.db.QueryRow(ctx, getSupplier, supplierID)
 	var i Supplier
 	err := row.Scan(
 		&i.SupplierID,
@@ -183,25 +181,25 @@ WHERE supplier_id = $1
 `
 
 type GetSupplierWithContactInfoRow struct {
-	SupplierID       int16          `json:"supplier_id"`
-	CompanyName      string         `json:"company_name"`
-	ContactName      sql.NullString `json:"contact_name"`
-	ContactTitle     sql.NullString `json:"contact_title"`
-	Address          sql.NullString `json:"address"`
-	City             sql.NullString `json:"city"`
-	Region           sql.NullString `json:"region"`
-	PostalCode       sql.NullString `json:"postal_code"`
-	Country          sql.NullString `json:"country"`
-	Phone            sql.NullString `json:"phone"`
-	Fax              sql.NullString `json:"fax"`
-	Homepage         sql.NullString `json:"homepage"`
-	FormattedContact interface{}    `json:"formatted_contact"`
-	FullAddress      interface{}    `json:"full_address"`
+	SupplierID       int16       `json:"supplier_id"`
+	CompanyName      string      `json:"company_name"`
+	ContactName      pgtype.Text `json:"contact_name"`
+	ContactTitle     pgtype.Text `json:"contact_title"`
+	Address          pgtype.Text `json:"address"`
+	City             pgtype.Text `json:"city"`
+	Region           pgtype.Text `json:"region"`
+	PostalCode       pgtype.Text `json:"postal_code"`
+	Country          pgtype.Text `json:"country"`
+	Phone            pgtype.Text `json:"phone"`
+	Fax              pgtype.Text `json:"fax"`
+	Homepage         pgtype.Text `json:"homepage"`
+	FormattedContact interface{} `json:"formatted_contact"`
+	FullAddress      interface{} `json:"full_address"`
 }
 
 // Gets a supplier by ID with formatted contact information
 func (q *Queries) GetSupplierWithContactInfo(ctx context.Context, supplierID int16) (GetSupplierWithContactInfoRow, error) {
-	row := q.db.QueryRowContext(ctx, getSupplierWithContactInfo, supplierID)
+	row := q.db.QueryRow(ctx, getSupplierWithContactInfo, supplierID)
 	var i GetSupplierWithContactInfoRow
 	err := row.Scan(
 		&i.SupplierID,
@@ -230,7 +228,7 @@ ORDER BY company_name
 
 // Lists all suppliers
 func (q *Queries) ListSuppliers(ctx context.Context) ([]Supplier, error) {
-	rows, err := q.db.QueryContext(ctx, listSuppliers)
+	rows, err := q.db.Query(ctx, listSuppliers)
 	if err != nil {
 		return nil, err
 	}
@@ -255,9 +253,6 @@ func (q *Queries) ListSuppliers(ctx context.Context) ([]Supplier, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -273,8 +268,8 @@ ORDER BY company_name
 `
 
 // Lists all suppliers from a specific city
-func (q *Queries) ListSuppliersByCity(ctx context.Context, city sql.NullString) ([]Supplier, error) {
-	rows, err := q.db.QueryContext(ctx, listSuppliersByCity, city)
+func (q *Queries) ListSuppliersByCity(ctx context.Context, city pgtype.Text) ([]Supplier, error) {
+	rows, err := q.db.Query(ctx, listSuppliersByCity, city)
 	if err != nil {
 		return nil, err
 	}
@@ -299,9 +294,6 @@ func (q *Queries) ListSuppliersByCity(ctx context.Context, city sql.NullString) 
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -317,8 +309,8 @@ ORDER BY company_name
 `
 
 // Lists all suppliers from a specific country
-func (q *Queries) ListSuppliersByCountry(ctx context.Context, country sql.NullString) ([]Supplier, error) {
-	rows, err := q.db.QueryContext(ctx, listSuppliersByCountry, country)
+func (q *Queries) ListSuppliersByCountry(ctx context.Context, country pgtype.Text) ([]Supplier, error) {
+	rows, err := q.db.Query(ctx, listSuppliersByCountry, country)
 	if err != nil {
 		return nil, err
 	}
@@ -343,9 +335,6 @@ func (q *Queries) ListSuppliersByCountry(ctx context.Context, country sql.NullSt
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -361,8 +350,8 @@ ORDER BY company_name
 `
 
 // Searches suppliers by company name (case insensitive)
-func (q *Queries) SearchSuppliersByCompanyName(ctx context.Context, dollar_1 sql.NullString) ([]Supplier, error) {
-	rows, err := q.db.QueryContext(ctx, searchSuppliersByCompanyName, dollar_1)
+func (q *Queries) SearchSuppliersByCompanyName(ctx context.Context, dollar_1 pgtype.Text) ([]Supplier, error) {
+	rows, err := q.db.Query(ctx, searchSuppliersByCompanyName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -387,9 +376,6 @@ func (q *Queries) SearchSuppliersByCompanyName(ctx context.Context, dollar_1 sql
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -405,8 +391,8 @@ ORDER BY contact_name
 `
 
 // Searches suppliers by contact name (case insensitive)
-func (q *Queries) SearchSuppliersByContactName(ctx context.Context, dollar_1 sql.NullString) ([]Supplier, error) {
-	rows, err := q.db.QueryContext(ctx, searchSuppliersByContactName, dollar_1)
+func (q *Queries) SearchSuppliersByContactName(ctx context.Context, dollar_1 pgtype.Text) ([]Supplier, error) {
+	rows, err := q.db.Query(ctx, searchSuppliersByContactName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -431,9 +417,6 @@ func (q *Queries) SearchSuppliersByContactName(ctx context.Context, dollar_1 sql
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -460,23 +443,23 @@ RETURNING supplier_id, company_name, contact_name, contact_title, address, city,
 `
 
 type UpdateSupplierParams struct {
-	SupplierID   int16          `json:"supplier_id"`
-	CompanyName  string         `json:"company_name"`
-	ContactName  sql.NullString `json:"contact_name"`
-	ContactTitle sql.NullString `json:"contact_title"`
-	Address      sql.NullString `json:"address"`
-	City         sql.NullString `json:"city"`
-	Region       sql.NullString `json:"region"`
-	PostalCode   sql.NullString `json:"postal_code"`
-	Country      sql.NullString `json:"country"`
-	Phone        sql.NullString `json:"phone"`
-	Fax          sql.NullString `json:"fax"`
-	Homepage     sql.NullString `json:"homepage"`
+	SupplierID   int16       `json:"supplier_id"`
+	CompanyName  string      `json:"company_name"`
+	ContactName  pgtype.Text `json:"contact_name"`
+	ContactTitle pgtype.Text `json:"contact_title"`
+	Address      pgtype.Text `json:"address"`
+	City         pgtype.Text `json:"city"`
+	Region       pgtype.Text `json:"region"`
+	PostalCode   pgtype.Text `json:"postal_code"`
+	Country      pgtype.Text `json:"country"`
+	Phone        pgtype.Text `json:"phone"`
+	Fax          pgtype.Text `json:"fax"`
+	Homepage     pgtype.Text `json:"homepage"`
 }
 
 // Updates a supplier by ID
 func (q *Queries) UpdateSupplier(ctx context.Context, arg UpdateSupplierParams) (Supplier, error) {
-	row := q.db.QueryRowContext(ctx, updateSupplier,
+	row := q.db.QueryRow(ctx, updateSupplier,
 		arg.SupplierID,
 		arg.CompanyName,
 		arg.ContactName,

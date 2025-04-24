@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countOrders = `-- name: CountOrders :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM orders
 
 // Counts the total number of orders
 func (q *Queries) CountOrders(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countOrders)
+	row := q.db.QueryRow(ctx, countOrders)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -32,13 +33,13 @@ ORDER BY COUNT(*) DESC
 `
 
 type CountOrdersByCountryRow struct {
-	ShipCountry sql.NullString `json:"ship_country"`
-	OrderCount  int64          `json:"order_count"`
+	ShipCountry pgtype.Text `json:"ship_country"`
+	OrderCount  int64       `json:"order_count"`
 }
 
 // Counts orders grouped by shipping country
 func (q *Queries) CountOrdersByCountry(ctx context.Context) ([]CountOrdersByCountryRow, error) {
-	rows, err := q.db.QueryContext(ctx, countOrdersByCountry)
+	rows, err := q.db.Query(ctx, countOrdersByCountry)
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +51,6 @@ func (q *Queries) CountOrdersByCountry(ctx context.Context) ([]CountOrdersByCoun
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -80,7 +78,7 @@ type CountOrdersByStatusRow struct {
 
 // Counts orders grouped by their status
 func (q *Queries) CountOrdersByStatus(ctx context.Context) ([]CountOrdersByStatusRow, error) {
-	rows, err := q.db.QueryContext(ctx, countOrdersByStatus)
+	rows, err := q.db.Query(ctx, countOrdersByStatus)
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +90,6 @@ func (q *Queries) CountOrdersByStatus(ctx context.Context) ([]CountOrdersByStatu
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -124,24 +119,24 @@ RETURNING order_id, customer_id, employee_id, order_date, required_date, shipped
 `
 
 type CreateOrderParams struct {
-	CustomerID     interface{}     `json:"customer_id"`
-	EmployeeID     sql.NullInt16   `json:"employee_id"`
-	OrderDate      sql.NullTime    `json:"order_date"`
-	RequiredDate   sql.NullTime    `json:"required_date"`
-	ShippedDate    sql.NullTime    `json:"shipped_date"`
-	ShipVia        sql.NullInt16   `json:"ship_via"`
-	Freight        sql.NullFloat64 `json:"freight"`
-	ShipName       sql.NullString  `json:"ship_name"`
-	ShipAddress    sql.NullString  `json:"ship_address"`
-	ShipCity       sql.NullString  `json:"ship_city"`
-	ShipRegion     sql.NullString  `json:"ship_region"`
-	ShipPostalCode sql.NullString  `json:"ship_postal_code"`
-	ShipCountry    sql.NullString  `json:"ship_country"`
+	CustomerID     interface{}   `json:"customer_id"`
+	EmployeeID     pgtype.Int2   `json:"employee_id"`
+	OrderDate      pgtype.Date   `json:"order_date"`
+	RequiredDate   pgtype.Date   `json:"required_date"`
+	ShippedDate    pgtype.Date   `json:"shipped_date"`
+	ShipVia        pgtype.Int2   `json:"ship_via"`
+	Freight        pgtype.Float4 `json:"freight"`
+	ShipName       pgtype.Text   `json:"ship_name"`
+	ShipAddress    pgtype.Text   `json:"ship_address"`
+	ShipCity       pgtype.Text   `json:"ship_city"`
+	ShipRegion     pgtype.Text   `json:"ship_region"`
+	ShipPostalCode pgtype.Text   `json:"ship_postal_code"`
+	ShipCountry    pgtype.Text   `json:"ship_country"`
 }
 
 // Creates a new order and returns it
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
-	row := q.db.QueryRowContext(ctx, createOrder,
+	row := q.db.QueryRow(ctx, createOrder,
 		arg.CustomerID,
 		arg.EmployeeID,
 		arg.OrderDate,
@@ -183,7 +178,7 @@ WHERE order_id = $1
 
 // Deletes an order by ID
 func (q *Queries) DeleteOrder(ctx context.Context, orderID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteOrder, orderID)
+	_, err := q.db.Exec(ctx, deleteOrder, orderID)
 	return err
 }
 
@@ -196,7 +191,7 @@ WHERE shipped_date IS NOT NULL
 
 // Gets the average time between order and shipment
 func (q *Queries) GetAverageProcessingTime(ctx context.Context) (float64, error) {
-	row := q.db.QueryRowContext(ctx, getAverageProcessingTime)
+	row := q.db.QueryRow(ctx, getAverageProcessingTime)
 	var avg_processing_days float64
 	err := row.Scan(&avg_processing_days)
 	return avg_processing_days, err
@@ -213,13 +208,13 @@ ORDER BY month
 `
 
 type GetMonthlyOrderCountsRow struct {
-	Month      string `json:"month"`
-	OrderCount int64  `json:"order_count"`
+	Month      pgtype.Numeric `json:"month"`
+	OrderCount int64          `json:"order_count"`
 }
 
 // Gets order counts by month for a given year
-func (q *Queries) GetMonthlyOrderCounts(ctx context.Context, orderDate sql.NullTime) ([]GetMonthlyOrderCountsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMonthlyOrderCounts, orderDate)
+func (q *Queries) GetMonthlyOrderCounts(ctx context.Context, orderDate pgtype.Date) ([]GetMonthlyOrderCountsRow, error) {
+	rows, err := q.db.Query(ctx, getMonthlyOrderCounts, orderDate)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +226,6 @@ func (q *Queries) GetMonthlyOrderCounts(ctx context.Context, orderDate sql.NullT
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -249,7 +241,7 @@ WHERE order_id = $1
 
 // Gets an order by ID
 func (q *Queries) GetOrder(ctx context.Context, orderID int16) (Order, error) {
-	row := q.db.QueryRowContext(ctx, getOrder, orderID)
+	row := q.db.QueryRow(ctx, getOrder, orderID)
 	var i Order
 	err := row.Scan(
 		&i.OrderID,
@@ -285,29 +277,29 @@ WHERE o.order_id = $1
 `
 
 type GetOrderWithDetailsRow struct {
-	OrderID         int16           `json:"order_id"`
-	CustomerID      interface{}     `json:"customer_id"`
-	EmployeeID      sql.NullInt16   `json:"employee_id"`
-	OrderDate       sql.NullTime    `json:"order_date"`
-	RequiredDate    sql.NullTime    `json:"required_date"`
-	ShippedDate     sql.NullTime    `json:"shipped_date"`
-	ShipVia         sql.NullInt16   `json:"ship_via"`
-	Freight         sql.NullFloat64 `json:"freight"`
-	ShipName        sql.NullString  `json:"ship_name"`
-	ShipAddress     sql.NullString  `json:"ship_address"`
-	ShipCity        sql.NullString  `json:"ship_city"`
-	ShipRegion      sql.NullString  `json:"ship_region"`
-	ShipPostalCode  sql.NullString  `json:"ship_postal_code"`
-	ShipCountry     sql.NullString  `json:"ship_country"`
-	CustomerName    sql.NullString  `json:"customer_name"`
-	CustomerContact sql.NullString  `json:"customer_contact"`
-	EmployeeName    interface{}     `json:"employee_name"`
-	ShipperName     sql.NullString  `json:"shipper_name"`
+	OrderID         int16         `json:"order_id"`
+	CustomerID      interface{}   `json:"customer_id"`
+	EmployeeID      pgtype.Int2   `json:"employee_id"`
+	OrderDate       pgtype.Date   `json:"order_date"`
+	RequiredDate    pgtype.Date   `json:"required_date"`
+	ShippedDate     pgtype.Date   `json:"shipped_date"`
+	ShipVia         pgtype.Int2   `json:"ship_via"`
+	Freight         pgtype.Float4 `json:"freight"`
+	ShipName        pgtype.Text   `json:"ship_name"`
+	ShipAddress     pgtype.Text   `json:"ship_address"`
+	ShipCity        pgtype.Text   `json:"ship_city"`
+	ShipRegion      pgtype.Text   `json:"ship_region"`
+	ShipPostalCode  pgtype.Text   `json:"ship_postal_code"`
+	ShipCountry     pgtype.Text   `json:"ship_country"`
+	CustomerName    pgtype.Text   `json:"customer_name"`
+	CustomerContact pgtype.Text   `json:"customer_contact"`
+	EmployeeName    interface{}   `json:"employee_name"`
+	ShipperName     pgtype.Text   `json:"shipper_name"`
 }
 
 // Gets an order by ID with customer, employee, and shipper details
 func (q *Queries) GetOrderWithDetails(ctx context.Context, orderID int16) (GetOrderWithDetailsRow, error) {
-	row := q.db.QueryRowContext(ctx, getOrderWithDetails, orderID)
+	row := q.db.QueryRow(ctx, getOrderWithDetails, orderID)
 	var i GetOrderWithDetailsRow
 	err := row.Scan(
 		&i.OrderID,
@@ -352,7 +344,7 @@ type GetTotalFreightByCustomerRow struct {
 
 // Gets total freight costs grouped by customer
 func (q *Queries) GetTotalFreightByCustomer(ctx context.Context, limit int32) ([]GetTotalFreightByCustomerRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTotalFreightByCustomer, limit)
+	rows, err := q.db.Query(ctx, getTotalFreightByCustomer, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -364,9 +356,6 @@ func (q *Queries) GetTotalFreightByCustomer(ctx context.Context, limit int32) ([
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -383,7 +372,7 @@ ORDER BY shipped_date DESC
 
 // Lists orders that were shipped after the required date
 func (q *Queries) ListDelayedOrders(ctx context.Context) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listDelayedOrders)
+	rows, err := q.db.Query(ctx, listDelayedOrders)
 	if err != nil {
 		return nil, err
 	}
@@ -410,9 +399,6 @@ func (q *Queries) ListDelayedOrders(ctx context.Context) ([]Order, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -428,7 +414,7 @@ ORDER BY order_date DESC
 
 // Lists all orders sorted by date (newest first)
 func (q *Queries) ListOrders(ctx context.Context) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrders)
+	rows, err := q.db.Query(ctx, listOrders)
 	if err != nil {
 		return nil, err
 	}
@@ -455,9 +441,6 @@ func (q *Queries) ListOrders(ctx context.Context) ([]Order, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -474,7 +457,7 @@ ORDER BY order_date DESC
 
 // Lists all orders for a specific customer
 func (q *Queries) ListOrdersByCustomer(ctx context.Context, customerID interface{}) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrdersByCustomer, customerID)
+	rows, err := q.db.Query(ctx, listOrdersByCustomer, customerID)
 	if err != nil {
 		return nil, err
 	}
@@ -501,9 +484,6 @@ func (q *Queries) ListOrdersByCustomer(ctx context.Context, customerID interface
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -519,13 +499,13 @@ ORDER BY order_date DESC
 `
 
 type ListOrdersByDateRangeParams struct {
-	OrderDate   sql.NullTime `json:"order_date"`
-	OrderDate_2 sql.NullTime `json:"order_date_2"`
+	OrderDate   pgtype.Date `json:"order_date"`
+	OrderDate_2 pgtype.Date `json:"order_date_2"`
 }
 
 // Lists orders within a specific date range
 func (q *Queries) ListOrdersByDateRange(ctx context.Context, arg ListOrdersByDateRangeParams) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrdersByDateRange, arg.OrderDate, arg.OrderDate_2)
+	rows, err := q.db.Query(ctx, listOrdersByDateRange, arg.OrderDate, arg.OrderDate_2)
 	if err != nil {
 		return nil, err
 	}
@@ -552,9 +532,6 @@ func (q *Queries) ListOrdersByDateRange(ctx context.Context, arg ListOrdersByDat
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -570,8 +547,8 @@ ORDER BY order_date DESC
 `
 
 // Lists all orders handled by a specific employee
-func (q *Queries) ListOrdersByEmployee(ctx context.Context, employeeID sql.NullInt16) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrdersByEmployee, employeeID)
+func (q *Queries) ListOrdersByEmployee(ctx context.Context, employeeID pgtype.Int2) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrdersByEmployee, employeeID)
 	if err != nil {
 		return nil, err
 	}
@@ -598,9 +575,6 @@ func (q *Queries) ListOrdersByEmployee(ctx context.Context, employeeID sql.NullI
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -616,8 +590,8 @@ ORDER BY order_date DESC
 `
 
 // Lists all orders shipped by a specific shipper
-func (q *Queries) ListOrdersByShipper(ctx context.Context, shipVia sql.NullInt16) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listOrdersByShipper, shipVia)
+func (q *Queries) ListOrdersByShipper(ctx context.Context, shipVia pgtype.Int2) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrdersByShipper, shipVia)
 	if err != nil {
 		return nil, err
 	}
@@ -644,9 +618,6 @@ func (q *Queries) ListOrdersByShipper(ctx context.Context, shipVia sql.NullInt16
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -663,7 +634,7 @@ ORDER BY required_date ASC
 
 // Lists orders that have not been shipped yet
 func (q *Queries) ListPendingShipments(ctx context.Context) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listPendingShipments)
+	rows, err := q.db.Query(ctx, listPendingShipments)
 	if err != nil {
 		return nil, err
 	}
@@ -690,9 +661,6 @@ func (q *Queries) ListPendingShipments(ctx context.Context) ([]Order, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -708,8 +676,8 @@ ORDER BY order_date DESC
 `
 
 // Lists orders placed within a specified number of days
-func (q *Queries) ListRecentOrders(ctx context.Context, dollar_1 int64) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, listRecentOrders, dollar_1)
+func (q *Queries) ListRecentOrders(ctx context.Context, dollar_1 pgtype.Interval) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listRecentOrders, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -736,9 +704,6 @@ func (q *Queries) ListRecentOrders(ctx context.Context, dollar_1 int64) ([]Order
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -767,25 +732,25 @@ RETURNING order_id, customer_id, employee_id, order_date, required_date, shipped
 `
 
 type UpdateOrderParams struct {
-	OrderID        int16           `json:"order_id"`
-	CustomerID     interface{}     `json:"customer_id"`
-	EmployeeID     sql.NullInt16   `json:"employee_id"`
-	OrderDate      sql.NullTime    `json:"order_date"`
-	RequiredDate   sql.NullTime    `json:"required_date"`
-	ShippedDate    sql.NullTime    `json:"shipped_date"`
-	ShipVia        sql.NullInt16   `json:"ship_via"`
-	Freight        sql.NullFloat64 `json:"freight"`
-	ShipName       sql.NullString  `json:"ship_name"`
-	ShipAddress    sql.NullString  `json:"ship_address"`
-	ShipCity       sql.NullString  `json:"ship_city"`
-	ShipRegion     sql.NullString  `json:"ship_region"`
-	ShipPostalCode sql.NullString  `json:"ship_postal_code"`
-	ShipCountry    sql.NullString  `json:"ship_country"`
+	OrderID        int16         `json:"order_id"`
+	CustomerID     interface{}   `json:"customer_id"`
+	EmployeeID     pgtype.Int2   `json:"employee_id"`
+	OrderDate      pgtype.Date   `json:"order_date"`
+	RequiredDate   pgtype.Date   `json:"required_date"`
+	ShippedDate    pgtype.Date   `json:"shipped_date"`
+	ShipVia        pgtype.Int2   `json:"ship_via"`
+	Freight        pgtype.Float4 `json:"freight"`
+	ShipName       pgtype.Text   `json:"ship_name"`
+	ShipAddress    pgtype.Text   `json:"ship_address"`
+	ShipCity       pgtype.Text   `json:"ship_city"`
+	ShipRegion     pgtype.Text   `json:"ship_region"`
+	ShipPostalCode pgtype.Text   `json:"ship_postal_code"`
+	ShipCountry    pgtype.Text   `json:"ship_country"`
 }
 
 // Updates an order by ID
 func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error) {
-	row := q.db.QueryRowContext(ctx, updateOrder,
+	row := q.db.QueryRow(ctx, updateOrder,
 		arg.OrderID,
 		arg.CustomerID,
 		arg.EmployeeID,
@@ -832,15 +797,15 @@ RETURNING order_id, customer_id, employee_id, order_date, required_date, shipped
 `
 
 type UpdateShippingInfoParams struct {
-	OrderID     int16           `json:"order_id"`
-	ShippedDate sql.NullTime    `json:"shipped_date"`
-	ShipVia     sql.NullInt16   `json:"ship_via"`
-	Freight     sql.NullFloat64 `json:"freight"`
+	OrderID     int16         `json:"order_id"`
+	ShippedDate pgtype.Date   `json:"shipped_date"`
+	ShipVia     pgtype.Int2   `json:"ship_via"`
+	Freight     pgtype.Float4 `json:"freight"`
 }
 
 // Updates just the shipping info for an order
 func (q *Queries) UpdateShippingInfo(ctx context.Context, arg UpdateShippingInfoParams) (Order, error) {
-	row := q.db.QueryRowContext(ctx, updateShippingInfo,
+	row := q.db.QueryRow(ctx, updateShippingInfo,
 		arg.OrderID,
 		arg.ShippedDate,
 		arg.ShipVia,

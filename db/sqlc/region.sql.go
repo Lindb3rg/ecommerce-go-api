@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countRegions = `-- name: CountRegions :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM region
 
 // Counts the total number of regions
 func (q *Queries) CountRegions(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countRegions)
+	row := q.db.QueryRow(ctx, countRegions)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -33,7 +34,7 @@ RETURNING region_id, region_description
 
 // Creates a new region and returns it
 func (q *Queries) CreateRegion(ctx context.Context, regionDescription interface{}) (Region, error) {
-	row := q.db.QueryRowContext(ctx, createRegion, regionDescription)
+	row := q.db.QueryRow(ctx, createRegion, regionDescription)
 	var i Region
 	err := row.Scan(&i.RegionID, &i.RegionDescription)
 	return i, err
@@ -46,7 +47,7 @@ WHERE region_id = $1
 
 // Deletes a region by ID
 func (q *Queries) DeleteRegion(ctx context.Context, regionID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteRegion, regionID)
+	_, err := q.db.Exec(ctx, deleteRegion, regionID)
 	return err
 }
 
@@ -58,7 +59,7 @@ WHERE region_id = $1
 
 // Gets a region by ID
 func (q *Queries) GetRegion(ctx context.Context, regionID int16) (Region, error) {
-	row := q.db.QueryRowContext(ctx, getRegion, regionID)
+	row := q.db.QueryRow(ctx, getRegion, regionID)
 	var i Region
 	err := row.Scan(&i.RegionID, &i.RegionDescription)
 	return i, err
@@ -72,7 +73,7 @@ WHERE region_description = $1
 
 // Gets a region by exact description (useful for lookups)
 func (q *Queries) GetRegionByDescription(ctx context.Context, regionDescription interface{}) (Region, error) {
-	row := q.db.QueryRowContext(ctx, getRegionByDescription, regionDescription)
+	row := q.db.QueryRow(ctx, getRegionByDescription, regionDescription)
 	var i Region
 	err := row.Scan(&i.RegionID, &i.RegionDescription)
 	return i, err
@@ -86,7 +87,7 @@ ORDER BY region_id
 
 // Lists all regions
 func (q *Queries) ListRegions(ctx context.Context) ([]Region, error) {
-	rows, err := q.db.QueryContext(ctx, listRegions)
+	rows, err := q.db.Query(ctx, listRegions)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +99,6 @@ func (q *Queries) ListRegions(ctx context.Context) ([]Region, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -116,8 +114,8 @@ ORDER BY region_id
 `
 
 // Searches regions by description (case insensitive)
-func (q *Queries) SearchRegionsByDescription(ctx context.Context, dollar_1 sql.NullString) ([]Region, error) {
-	rows, err := q.db.QueryContext(ctx, searchRegionsByDescription, dollar_1)
+func (q *Queries) SearchRegionsByDescription(ctx context.Context, dollar_1 pgtype.Text) ([]Region, error) {
+	rows, err := q.db.Query(ctx, searchRegionsByDescription, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -129,9 +127,6 @@ func (q *Queries) SearchRegionsByDescription(ctx context.Context, dollar_1 sql.N
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -154,7 +149,7 @@ type UpdateRegionParams struct {
 
 // Updates a region by ID
 func (q *Queries) UpdateRegion(ctx context.Context, arg UpdateRegionParams) (Region, error) {
-	row := q.db.QueryRowContext(ctx, updateRegion, arg.RegionID, arg.RegionDescription)
+	row := q.db.QueryRow(ctx, updateRegion, arg.RegionID, arg.RegionDescription)
 	var i Region
 	err := row.Scan(&i.RegionID, &i.RegionDescription)
 	return i, err

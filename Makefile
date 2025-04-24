@@ -1,5 +1,5 @@
 postgres:
-	docker run --name postgres-ecommerce -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:latest
+	docker run --name postgres-ecommerce -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD="$(POSTGRES_PASSWORD)" -d postgres:latest
 
 createdb:
 	docker exec -it postgres-ecommerce createdb --username=root --owner=root ecommerce-db
@@ -13,19 +13,19 @@ dropdb:
 
 
 migrateup:
-	migrate -path db/migration -database "postgres://root:secret@localhost:5432/ecommerce-db?sslmode=disable" -verbose up
+	migrate -path db/migration -database "$(DB_URL)" -verbose up
 
 migrateup1:
-	migrate -path db/migration -database "postgres://root:secret@localhost:5432/ecommerce-db?sslmode=disable" -verbose up 1
+	migrate -path db/migration -database "$(DB_URL)" -verbose up 1
 
 migratedown:
-	migrate -path db/migration -database "postgres://root:secret@localhost:5432/ecommerce-db?sslmode=disable" -verbose down
+	migrate -path db/migration -database "$(DB_URL)" -verbose down
 
 migratedown1:
-	migrate -path db/migration -database "postgres://root:secret@localhost:5432/ecommerce-db?sslmode=disable" -verbose down 1
+	migrate -path db/migration -database "$(DB_URL)" -verbose down 1
 
 migrateversion:
-	migrate -path db/migration -database "postgres://root:secret@localhost:5432/ecommerce-db?sslmode=disable" -verbose version
+	migrate -path db/migration -database "$(DB_URL)" -verbose version
 
 sqlc:
 	sqlc generate

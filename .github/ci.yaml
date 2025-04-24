@@ -1,0 +1,57 @@
+name: ci-test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  test:
+    # Running on Linux server
+    runs-on: ubuntu-latest
+
+    # Setting up a postgres service
+    services:
+      # Setting up postgres docker image
+      postgres:
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: ecommerce-go-api
+        image: postgres:15-alpine
+        ports:
+        # Map to correct port
+        - 5432:5432
+
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+      # Setting up Go!
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+      id: go
+
+    - name: Check out code intothe Go module directory
+      uses: actions/checkout@v2
+      # Installing golang-migrate CLI
+      # Downloading zip-file
+      # Moving file to the directory so it can be detected
+      # Showing what migration version
+    - name: Install golang-migrate
+      run: |
+        
+        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.2/migrate.linux-amd64.tar.gz | tar xvz
+        sudo mv migrate /usr/bin/migrate
+        which migrate
+      # Running make command for migrate up
+    - name: Run migrations for actions
+      run: make migrateup
+      # Running make command for start tests
+    - name: Test
+      run: make test

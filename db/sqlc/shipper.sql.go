@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countShippers = `-- name: CountShippers :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM shippers
 
 // Counts the total number of shippers
 func (q *Queries) CountShippers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countShippers)
+	row := q.db.QueryRow(ctx, countShippers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -33,13 +34,13 @@ RETURNING shipper_id, company_name, phone
 `
 
 type CreateShipperParams struct {
-	CompanyName string         `json:"company_name"`
-	Phone       sql.NullString `json:"phone"`
+	CompanyName string      `json:"company_name"`
+	Phone       pgtype.Text `json:"phone"`
 }
 
 // Creates a new shipper and returns it
 func (q *Queries) CreateShipper(ctx context.Context, arg CreateShipperParams) (Shipper, error) {
-	row := q.db.QueryRowContext(ctx, createShipper, arg.CompanyName, arg.Phone)
+	row := q.db.QueryRow(ctx, createShipper, arg.CompanyName, arg.Phone)
 	var i Shipper
 	err := row.Scan(&i.ShipperID, &i.CompanyName, &i.Phone)
 	return i, err
@@ -52,7 +53,7 @@ WHERE shipper_id = $1
 
 // Deletes a shipper by ID
 func (q *Queries) DeleteShipper(ctx context.Context, shipperID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteShipper, shipperID)
+	_, err := q.db.Exec(ctx, deleteShipper, shipperID)
 	return err
 }
 
@@ -64,7 +65,7 @@ WHERE shipper_id = $1
 
 // Gets a shipper by ID
 func (q *Queries) GetShipper(ctx context.Context, shipperID int16) (Shipper, error) {
-	row := q.db.QueryRowContext(ctx, getShipper, shipperID)
+	row := q.db.QueryRow(ctx, getShipper, shipperID)
 	var i Shipper
 	err := row.Scan(&i.ShipperID, &i.CompanyName, &i.Phone)
 	return i, err
@@ -78,7 +79,7 @@ WHERE company_name = $1
 
 // Gets a shipper by exact company name (useful for duplicate checks)
 func (q *Queries) GetShipperByExactName(ctx context.Context, companyName string) (Shipper, error) {
-	row := q.db.QueryRowContext(ctx, getShipperByExactName, companyName)
+	row := q.db.QueryRow(ctx, getShipperByExactName, companyName)
 	var i Shipper
 	err := row.Scan(&i.ShipperID, &i.CompanyName, &i.Phone)
 	return i, err
@@ -92,7 +93,7 @@ ORDER BY company_name
 
 // Lists all shippers
 func (q *Queries) ListShippers(ctx context.Context) ([]Shipper, error) {
-	rows, err := q.db.QueryContext(ctx, listShippers)
+	rows, err := q.db.Query(ctx, listShippers)
 	if err != nil {
 		return nil, err
 	}
@@ -104,9 +105,6 @@ func (q *Queries) ListShippers(ctx context.Context) ([]Shipper, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -122,8 +120,8 @@ ORDER BY company_name
 `
 
 // Searches shippers by company name (case insensitive)
-func (q *Queries) SearchShippersByName(ctx context.Context, dollar_1 sql.NullString) ([]Shipper, error) {
-	rows, err := q.db.QueryContext(ctx, searchShippersByName, dollar_1)
+func (q *Queries) SearchShippersByName(ctx context.Context, dollar_1 pgtype.Text) ([]Shipper, error) {
+	rows, err := q.db.Query(ctx, searchShippersByName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +133,6 @@ func (q *Queries) SearchShippersByName(ctx context.Context, dollar_1 sql.NullStr
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -153,8 +148,8 @@ ORDER BY company_name
 `
 
 // Searches shippers by phone number
-func (q *Queries) SearchShippersByPhone(ctx context.Context, dollar_1 sql.NullString) ([]Shipper, error) {
-	rows, err := q.db.QueryContext(ctx, searchShippersByPhone, dollar_1)
+func (q *Queries) SearchShippersByPhone(ctx context.Context, dollar_1 pgtype.Text) ([]Shipper, error) {
+	rows, err := q.db.Query(ctx, searchShippersByPhone, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -166,9 +161,6 @@ func (q *Queries) SearchShippersByPhone(ctx context.Context, dollar_1 sql.NullSt
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -186,14 +178,14 @@ RETURNING shipper_id, company_name, phone
 `
 
 type UpdateShipperParams struct {
-	ShipperID   int16          `json:"shipper_id"`
-	CompanyName string         `json:"company_name"`
-	Phone       sql.NullString `json:"phone"`
+	ShipperID   int16       `json:"shipper_id"`
+	CompanyName string      `json:"company_name"`
+	Phone       pgtype.Text `json:"phone"`
 }
 
 // Updates a shipper by ID
 func (q *Queries) UpdateShipper(ctx context.Context, arg UpdateShipperParams) (Shipper, error) {
-	row := q.db.QueryRowContext(ctx, updateShipper, arg.ShipperID, arg.CompanyName, arg.Phone)
+	row := q.db.QueryRow(ctx, updateShipper, arg.ShipperID, arg.CompanyName, arg.Phone)
 	var i Shipper
 	err := row.Scan(&i.ShipperID, &i.CompanyName, &i.Phone)
 	return i, err

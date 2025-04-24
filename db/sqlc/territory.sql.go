@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countTerritories = `-- name: CountTerritories :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM territories
 
 // Counts the total number of territories
 func (q *Queries) CountTerritories(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countTerritories)
+	row := q.db.QueryRow(ctx, countTerritories)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -41,7 +42,7 @@ type CountTerritoriesByRegionRow struct {
 
 // Counts territories grouped by region
 func (q *Queries) CountTerritoriesByRegion(ctx context.Context) ([]CountTerritoriesByRegionRow, error) {
-	rows, err := q.db.QueryContext(ctx, countTerritoriesByRegion)
+	rows, err := q.db.Query(ctx, countTerritoriesByRegion)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +54,6 @@ func (q *Queries) CountTerritoriesByRegion(ctx context.Context) ([]CountTerritor
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -82,7 +80,7 @@ type CreateTerritoryParams struct {
 
 // Creates a new territory and returns it
 func (q *Queries) CreateTerritory(ctx context.Context, arg CreateTerritoryParams) (Territory, error) {
-	row := q.db.QueryRowContext(ctx, createTerritory, arg.TerritoryID, arg.TerritoryDescription, arg.RegionID)
+	row := q.db.QueryRow(ctx, createTerritory, arg.TerritoryID, arg.TerritoryDescription, arg.RegionID)
 	var i Territory
 	err := row.Scan(&i.TerritoryID, &i.TerritoryDescription, &i.RegionID)
 	return i, err
@@ -95,7 +93,7 @@ WHERE territory_id = $1
 
 // Deletes a territory by ID
 func (q *Queries) DeleteTerritory(ctx context.Context, territoryID string) error {
-	_, err := q.db.ExecContext(ctx, deleteTerritory, territoryID)
+	_, err := q.db.Exec(ctx, deleteTerritory, territoryID)
 	return err
 }
 
@@ -107,7 +105,7 @@ WHERE territory_id = $1
 
 // Gets a territory by ID
 func (q *Queries) GetTerritory(ctx context.Context, territoryID string) (Territory, error) {
-	row := q.db.QueryRowContext(ctx, getTerritory, territoryID)
+	row := q.db.QueryRow(ctx, getTerritory, territoryID)
 	var i Territory
 	err := row.Scan(&i.TerritoryID, &i.TerritoryDescription, &i.RegionID)
 	return i, err
@@ -133,7 +131,7 @@ type GetTerritoryWithRegionRow struct {
 
 // Gets a territory by ID with its region details
 func (q *Queries) GetTerritoryWithRegion(ctx context.Context, territoryID string) (GetTerritoryWithRegionRow, error) {
-	row := q.db.QueryRowContext(ctx, getTerritoryWithRegion, territoryID)
+	row := q.db.QueryRow(ctx, getTerritoryWithRegion, territoryID)
 	var i GetTerritoryWithRegionRow
 	err := row.Scan(
 		&i.TerritoryID,
@@ -152,7 +150,7 @@ ORDER BY territory_id
 
 // Lists all territories
 func (q *Queries) ListTerritories(ctx context.Context) ([]Territory, error) {
-	rows, err := q.db.QueryContext(ctx, listTerritories)
+	rows, err := q.db.Query(ctx, listTerritories)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +162,6 @@ func (q *Queries) ListTerritories(ctx context.Context) ([]Territory, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -183,7 +178,7 @@ ORDER BY territory_id
 
 // Lists all territories in a specific region
 func (q *Queries) ListTerritoriesByRegion(ctx context.Context, regionID int16) ([]Territory, error) {
-	rows, err := q.db.QueryContext(ctx, listTerritoriesByRegion, regionID)
+	rows, err := q.db.Query(ctx, listTerritoriesByRegion, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -195,9 +190,6 @@ func (q *Queries) ListTerritoriesByRegion(ctx context.Context, regionID int16) (
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -225,7 +217,7 @@ type ListTerritoriesWithRegionRow struct {
 
 // Lists all territories with their region details
 func (q *Queries) ListTerritoriesWithRegion(ctx context.Context) ([]ListTerritoriesWithRegionRow, error) {
-	rows, err := q.db.QueryContext(ctx, listTerritoriesWithRegion)
+	rows, err := q.db.Query(ctx, listTerritoriesWithRegion)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +235,6 @@ func (q *Queries) ListTerritoriesWithRegion(ctx context.Context) ([]ListTerritor
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -260,8 +249,8 @@ ORDER BY territory_id
 `
 
 // Searches territories by description (case insensitive)
-func (q *Queries) SearchTerritoriesByDescription(ctx context.Context, dollar_1 sql.NullString) ([]Territory, error) {
-	rows, err := q.db.QueryContext(ctx, searchTerritoriesByDescription, dollar_1)
+func (q *Queries) SearchTerritoriesByDescription(ctx context.Context, dollar_1 pgtype.Text) ([]Territory, error) {
+	rows, err := q.db.Query(ctx, searchTerritoriesByDescription, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -273,9 +262,6 @@ func (q *Queries) SearchTerritoriesByDescription(ctx context.Context, dollar_1 s
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -300,7 +286,7 @@ type UpdateTerritoryParams struct {
 
 // Updates a territory by ID
 func (q *Queries) UpdateTerritory(ctx context.Context, arg UpdateTerritoryParams) (Territory, error) {
-	row := q.db.QueryRowContext(ctx, updateTerritory, arg.TerritoryID, arg.TerritoryDescription, arg.RegionID)
+	row := q.db.QueryRow(ctx, updateTerritory, arg.TerritoryID, arg.TerritoryDescription, arg.RegionID)
 	var i Territory
 	err := row.Scan(&i.TerritoryID, &i.TerritoryDescription, &i.RegionID)
 	return i, err

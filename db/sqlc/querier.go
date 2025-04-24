@@ -6,7 +6,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -145,7 +146,7 @@ type Querier interface {
 	// Gets an employee by ID along with their manager's details
 	GetEmployeeWithManager(ctx context.Context, employeeID int16) (GetEmployeeWithManagerRow, error)
 	// Gets order counts by month for a given year
-	GetMonthlyOrderCounts(ctx context.Context, orderDate sql.NullTime) ([]GetMonthlyOrderCountsRow, error)
+	GetMonthlyOrderCounts(ctx context.Context, orderDate pgtype.Date) ([]GetMonthlyOrderCountsRow, error)
 	// Gets the most popular products based on quantity ordered
 	GetMostPopularProducts(ctx context.Context, limit int32) ([]GetMostPopularProductsRow, error)
 	// Gets an order by ID
@@ -181,9 +182,9 @@ type Querier interface {
 	// Gets a state by its primary key (employee_id).
 	GetState(ctx context.Context, employeeID int16) (UsState, error)
 	// Gets a state by its abbreviation.
-	GetStateByAbbreviation(ctx context.Context, stateAbbr sql.NullString) (UsState, error)
+	GetStateByAbbreviation(ctx context.Context, stateAbbr pgtype.Text) (UsState, error)
 	// Gets all states in a specific region.
-	GetStatesByRegion(ctx context.Context, stateRegion sql.NullString) ([]UsState, error)
+	GetStatesByRegion(ctx context.Context, stateRegion pgtype.Text) ([]UsState, error)
 	// Gets a supplier by ID
 	GetSupplier(ctx context.Context, supplierID int16) (Supplier, error)
 	// Gets a supplier by ID with formatted contact information
@@ -207,9 +208,9 @@ type Querier interface {
 	// Lists all customers
 	ListCustomers(ctx context.Context) ([]Customer, error)
 	// Lists all customers from a specific city
-	ListCustomersByCity(ctx context.Context, city sql.NullString) ([]Customer, error)
+	ListCustomersByCity(ctx context.Context, city pgtype.Text) ([]Customer, error)
 	// Lists all customers from a specific country
-	ListCustomersByCountry(ctx context.Context, country sql.NullString) ([]Customer, error)
+	ListCustomersByCountry(ctx context.Context, country pgtype.Text) ([]Customer, error)
 	// Lists all customers belonging to a specific demographic with customer details
 	ListCustomersByDemographic(ctx context.Context, customerTypeID interface{}) ([]Customer, error)
 	// Lists orders that were shipped after the required date
@@ -219,15 +220,15 @@ type Querier interface {
 	// Lists all employees
 	ListEmployees(ctx context.Context) ([]Employee, error)
 	// Lists all employees from a specific country
-	ListEmployeesByCountry(ctx context.Context, country sql.NullString) ([]Employee, error)
+	ListEmployeesByCountry(ctx context.Context, country pgtype.Text) ([]Employee, error)
 	// Lists all employees that report to a specific manager
-	ListEmployeesByManager(ctx context.Context, reportsTo sql.NullInt16) ([]Employee, error)
+	ListEmployeesByManager(ctx context.Context, reportsTo pgtype.Int2) ([]Employee, error)
 	// Lists employees assigned to territories in a specific region
 	ListEmployeesByRegion(ctx context.Context, regionID int16) ([]ListEmployeesByRegionRow, error)
 	// Lists all employees assigned to a specific territory
 	ListEmployeesByTerritory(ctx context.Context, territoryID string) ([]Employee, error)
 	// Lists all employees with a specific title
-	ListEmployeesByTitle(ctx context.Context, title sql.NullString) ([]Employee, error)
+	ListEmployeesByTitle(ctx context.Context, title pgtype.Text) ([]Employee, error)
 	// Lists employees with their territories and regions
 	ListEmployeesWithTerritoriesAndRegions(ctx context.Context) ([]ListEmployeesWithTerritoriesAndRegionsRow, error)
 	// Lists all details for a specific order
@@ -241,23 +242,23 @@ type Querier interface {
 	// Lists orders within a specific date range
 	ListOrdersByDateRange(ctx context.Context, arg ListOrdersByDateRangeParams) ([]Order, error)
 	// Lists all orders handled by a specific employee
-	ListOrdersByEmployee(ctx context.Context, employeeID sql.NullInt16) ([]Order, error)
+	ListOrdersByEmployee(ctx context.Context, employeeID pgtype.Int2) ([]Order, error)
 	// Lists all orders shipped by a specific shipper
-	ListOrdersByShipper(ctx context.Context, shipVia sql.NullInt16) ([]Order, error)
+	ListOrdersByShipper(ctx context.Context, shipVia pgtype.Int2) ([]Order, error)
 	// Lists orders that have not been shipped yet
 	ListPendingShipments(ctx context.Context) ([]Order, error)
 	// Lists all products
 	ListProducts(ctx context.Context) ([]Product, error)
 	// Lists all products in a specific category
-	ListProductsByCategory(ctx context.Context, categoryID sql.NullInt16) ([]Product, error)
+	ListProductsByCategory(ctx context.Context, categoryID pgtype.Int2) ([]Product, error)
 	// Lists all products from a specific supplier
-	ListProductsBySupplier(ctx context.Context, supplierID sql.NullInt16) ([]Product, error)
+	ListProductsBySupplier(ctx context.Context, supplierID pgtype.Int2) ([]Product, error)
 	// Lists all products that need to be reordered (stock below reorder level)
 	ListProductsNeedingReorder(ctx context.Context) ([]Product, error)
 	// Lists all products with category and supplier details
 	ListProductsWithDetails(ctx context.Context) ([]ListProductsWithDetailsRow, error)
 	// Lists orders placed within a specified number of days
-	ListRecentOrders(ctx context.Context, dollar_1 int64) ([]Order, error)
+	ListRecentOrders(ctx context.Context, dollar_1 pgtype.Interval) ([]Order, error)
 	// Lists all regions
 	ListRegions(ctx context.Context) ([]Region, error)
 	// Lists all shippers
@@ -267,9 +268,9 @@ type Querier interface {
 	// Lists all suppliers
 	ListSuppliers(ctx context.Context) ([]Supplier, error)
 	// Lists all suppliers from a specific city
-	ListSuppliersByCity(ctx context.Context, city sql.NullString) ([]Supplier, error)
+	ListSuppliersByCity(ctx context.Context, city pgtype.Text) ([]Supplier, error)
 	// Lists all suppliers from a specific country
-	ListSuppliersByCountry(ctx context.Context, country sql.NullString) ([]Supplier, error)
+	ListSuppliersByCountry(ctx context.Context, country pgtype.Text) ([]Supplier, error)
 	// Lists all territories
 	ListTerritories(ctx context.Context) ([]Territory, error)
 	// Lists all territories assigned to a specific employee
@@ -279,29 +280,29 @@ type Querier interface {
 	// Lists all territories with their region details
 	ListTerritoriesWithRegion(ctx context.Context) ([]ListTerritoriesWithRegionRow, error)
 	// Searches categories by name (case insensitive)
-	SearchCategoriesByName(ctx context.Context, dollar_1 sql.NullString) ([]Category, error)
+	SearchCategoriesByName(ctx context.Context, dollar_1 pgtype.Text) ([]Category, error)
 	// Searches customer demographics by description (case insensitive)
-	SearchCustomerDemographicsByDesc(ctx context.Context, dollar_1 sql.NullString) ([]CustomerDemographic, error)
+	SearchCustomerDemographicsByDesc(ctx context.Context, dollar_1 pgtype.Text) ([]CustomerDemographic, error)
 	// Searches customers by company name (case insensitive)
-	SearchCustomersByCompanyName(ctx context.Context, dollar_1 sql.NullString) ([]Customer, error)
+	SearchCustomersByCompanyName(ctx context.Context, dollar_1 pgtype.Text) ([]Customer, error)
 	// Searches customers by contact name (case insensitive)
-	SearchCustomersByContactName(ctx context.Context, dollar_1 sql.NullString) ([]Customer, error)
+	SearchCustomersByContactName(ctx context.Context, dollar_1 pgtype.Text) ([]Customer, error)
 	// Searches employees by first or last name (case insensitive)
-	SearchEmployeesByName(ctx context.Context, dollar_1 sql.NullString) ([]Employee, error)
+	SearchEmployeesByName(ctx context.Context, dollar_1 pgtype.Text) ([]Employee, error)
 	// Searches products by name (case insensitive)
-	SearchProductsByName(ctx context.Context, dollar_1 sql.NullString) ([]Product, error)
+	SearchProductsByName(ctx context.Context, dollar_1 pgtype.Text) ([]Product, error)
 	// Searches regions by description (case insensitive)
-	SearchRegionsByDescription(ctx context.Context, dollar_1 sql.NullString) ([]Region, error)
+	SearchRegionsByDescription(ctx context.Context, dollar_1 pgtype.Text) ([]Region, error)
 	// Searches shippers by company name (case insensitive)
-	SearchShippersByName(ctx context.Context, dollar_1 sql.NullString) ([]Shipper, error)
+	SearchShippersByName(ctx context.Context, dollar_1 pgtype.Text) ([]Shipper, error)
 	// Searches shippers by phone number
-	SearchShippersByPhone(ctx context.Context, dollar_1 sql.NullString) ([]Shipper, error)
+	SearchShippersByPhone(ctx context.Context, dollar_1 pgtype.Text) ([]Shipper, error)
 	// Searches suppliers by company name (case insensitive)
-	SearchSuppliersByCompanyName(ctx context.Context, dollar_1 sql.NullString) ([]Supplier, error)
+	SearchSuppliersByCompanyName(ctx context.Context, dollar_1 pgtype.Text) ([]Supplier, error)
 	// Searches suppliers by contact name (case insensitive)
-	SearchSuppliersByContactName(ctx context.Context, dollar_1 sql.NullString) ([]Supplier, error)
+	SearchSuppliersByContactName(ctx context.Context, dollar_1 pgtype.Text) ([]Supplier, error)
 	// Searches territories by description (case insensitive)
-	SearchTerritoriesByDescription(ctx context.Context, dollar_1 sql.NullString) ([]Territory, error)
+	SearchTerritoriesByDescription(ctx context.Context, dollar_1 pgtype.Text) ([]Territory, error)
 	// Updates a category by ID
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	// Updates a customer by ID

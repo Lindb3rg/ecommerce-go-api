@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countEmployeesByTerritory = `-- name: CountEmployeesByTerritory :many
@@ -29,7 +30,7 @@ type CountEmployeesByTerritoryRow struct {
 
 // Counts employees grouped by territory
 func (q *Queries) CountEmployeesByTerritory(ctx context.Context) ([]CountEmployeesByTerritoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, countEmployeesByTerritory)
+	rows, err := q.db.Query(ctx, countEmployeesByTerritory)
 	if err != nil {
 		return nil, err
 	}
@@ -41,9 +42,6 @@ func (q *Queries) CountEmployeesByTerritory(ctx context.Context) ([]CountEmploye
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -72,7 +70,7 @@ type CountTerritoriesByEmployeeRow struct {
 
 // Counts territories grouped by employee
 func (q *Queries) CountTerritoriesByEmployee(ctx context.Context) ([]CountTerritoriesByEmployeeRow, error) {
-	rows, err := q.db.QueryContext(ctx, countTerritoriesByEmployee)
+	rows, err := q.db.Query(ctx, countTerritoriesByEmployee)
 	if err != nil {
 		return nil, err
 	}
@@ -89,9 +87,6 @@ func (q *Queries) CountTerritoriesByEmployee(ctx context.Context) ([]CountTerrit
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -116,7 +111,7 @@ type CreateEmployeeTerritoryRelationParams struct {
 
 // Assigns a territory to an employee
 func (q *Queries) CreateEmployeeTerritoryRelation(ctx context.Context, arg CreateEmployeeTerritoryRelationParams) (EmployeeTerritory, error) {
-	row := q.db.QueryRowContext(ctx, createEmployeeTerritoryRelation, arg.EmployeeID, arg.TerritoryID)
+	row := q.db.QueryRow(ctx, createEmployeeTerritoryRelation, arg.EmployeeID, arg.TerritoryID)
 	var i EmployeeTerritory
 	err := row.Scan(&i.EmployeeID, &i.TerritoryID)
 	return i, err
@@ -129,7 +124,7 @@ WHERE territory_id = $1
 
 // Removes all employee assignments for a specific territory
 func (q *Queries) DeleteAllEmployeeAssignmentsForTerritory(ctx context.Context, territoryID string) error {
-	_, err := q.db.ExecContext(ctx, deleteAllEmployeeAssignmentsForTerritory, territoryID)
+	_, err := q.db.Exec(ctx, deleteAllEmployeeAssignmentsForTerritory, territoryID)
 	return err
 }
 
@@ -140,7 +135,7 @@ WHERE employee_id = $1
 
 // Removes all territory assignments for a specific employee
 func (q *Queries) DeleteAllTerritoryAssignmentsForEmployee(ctx context.Context, employeeID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteAllTerritoryAssignmentsForEmployee, employeeID)
+	_, err := q.db.Exec(ctx, deleteAllTerritoryAssignmentsForEmployee, employeeID)
 	return err
 }
 
@@ -156,7 +151,7 @@ type DeleteEmployeeTerritoryRelationParams struct {
 
 // Removes a specific territory assignment from an employee
 func (q *Queries) DeleteEmployeeTerritoryRelation(ctx context.Context, arg DeleteEmployeeTerritoryRelationParams) error {
-	_, err := q.db.ExecContext(ctx, deleteEmployeeTerritoryRelation, arg.EmployeeID, arg.TerritoryID)
+	_, err := q.db.Exec(ctx, deleteEmployeeTerritoryRelation, arg.EmployeeID, arg.TerritoryID)
 	return err
 }
 
@@ -173,7 +168,7 @@ type GetEmployeeTerritoryRelationParams struct {
 
 // Gets a specific employee-territory relation
 func (q *Queries) GetEmployeeTerritoryRelation(ctx context.Context, arg GetEmployeeTerritoryRelationParams) (EmployeeTerritory, error) {
-	row := q.db.QueryRowContext(ctx, getEmployeeTerritoryRelation, arg.EmployeeID, arg.TerritoryID)
+	row := q.db.QueryRow(ctx, getEmployeeTerritoryRelation, arg.EmployeeID, arg.TerritoryID)
 	var i EmployeeTerritory
 	err := row.Scan(&i.EmployeeID, &i.TerritoryID)
 	return i, err
@@ -193,15 +188,15 @@ ORDER BY e.last_name, e.first_name
 `
 
 type ListEmployeesByRegionRow struct {
-	EmployeeID int16          `json:"employee_id"`
-	FirstName  string         `json:"first_name"`
-	LastName   string         `json:"last_name"`
-	Title      sql.NullString `json:"title"`
+	EmployeeID int16       `json:"employee_id"`
+	FirstName  string      `json:"first_name"`
+	LastName   string      `json:"last_name"`
+	Title      pgtype.Text `json:"title"`
 }
 
 // Lists employees assigned to territories in a specific region
 func (q *Queries) ListEmployeesByRegion(ctx context.Context, regionID int16) ([]ListEmployeesByRegionRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployeesByRegion, regionID)
+	rows, err := q.db.Query(ctx, listEmployeesByRegion, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +214,6 @@ func (q *Queries) ListEmployeesByRegion(ctx context.Context, regionID int16) ([]
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -238,7 +230,7 @@ ORDER BY e.last_name, e.first_name
 
 // Lists all employees assigned to a specific territory
 func (q *Queries) ListEmployeesByTerritory(ctx context.Context, territoryID string) ([]Employee, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployeesByTerritory, territoryID)
+	rows, err := q.db.Query(ctx, listEmployeesByTerritory, territoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -269,9 +261,6 @@ func (q *Queries) ListEmployeesByTerritory(ctx context.Context, territoryID stri
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -307,7 +296,7 @@ type ListEmployeesWithTerritoriesAndRegionsRow struct {
 
 // Lists employees with their territories and regions
 func (q *Queries) ListEmployeesWithTerritoriesAndRegions(ctx context.Context) ([]ListEmployeesWithTerritoriesAndRegionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEmployeesWithTerritoriesAndRegions)
+	rows, err := q.db.Query(ctx, listEmployeesWithTerritoriesAndRegions)
 	if err != nil {
 		return nil, err
 	}
@@ -328,9 +317,6 @@ func (q *Queries) ListEmployeesWithTerritoriesAndRegions(ctx context.Context) ([
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -347,7 +333,7 @@ ORDER BY t.territory_id
 
 // Lists all territories assigned to a specific employee
 func (q *Queries) ListTerritoriesByEmployee(ctx context.Context, employeeID int16) ([]Territory, error) {
-	rows, err := q.db.QueryContext(ctx, listTerritoriesByEmployee, employeeID)
+	rows, err := q.db.Query(ctx, listTerritoriesByEmployee, employeeID)
 	if err != nil {
 		return nil, err
 	}
@@ -359,9 +345,6 @@ func (q *Queries) ListTerritoriesByEmployee(ctx context.Context, employeeID int1
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

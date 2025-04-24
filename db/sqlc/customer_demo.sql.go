@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countCustomersByDemographic = `-- name: CountCustomersByDemographic :one
@@ -18,7 +19,7 @@ WHERE customer_type_id = $1
 
 // Counts how many customers belong to a specific demographic
 func (q *Queries) CountCustomersByDemographic(ctx context.Context, customerTypeID interface{}) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomersByDemographic, customerTypeID)
+	row := q.db.QueryRow(ctx, countCustomersByDemographic, customerTypeID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -32,7 +33,7 @@ WHERE customer_id = $1
 
 // Counts how many demographics a specific customer belongs to
 func (q *Queries) CountDemographicsByCustomer(ctx context.Context, customerID interface{}) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countDemographicsByCustomer, customerID)
+	row := q.db.QueryRow(ctx, countDemographicsByCustomer, customerID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -55,7 +56,7 @@ type CreateCustomerDemoRelationParams struct {
 
 // Creates a new customer-demographic relation
 func (q *Queries) CreateCustomerDemoRelation(ctx context.Context, arg CreateCustomerDemoRelationParams) (CustomerCustomerDemo, error) {
-	row := q.db.QueryRowContext(ctx, createCustomerDemoRelation, arg.CustomerID, arg.CustomerTypeID)
+	row := q.db.QueryRow(ctx, createCustomerDemoRelation, arg.CustomerID, arg.CustomerTypeID)
 	var i CustomerCustomerDemo
 	err := row.Scan(&i.CustomerID, &i.CustomerTypeID)
 	return i, err
@@ -68,7 +69,7 @@ WHERE customer_id = $1
 
 // Deletes all demographic relations for a specific customer
 func (q *Queries) DeleteAllCustomerDemoRelations(ctx context.Context, customerID interface{}) error {
-	_, err := q.db.ExecContext(ctx, deleteAllCustomerDemoRelations, customerID)
+	_, err := q.db.Exec(ctx, deleteAllCustomerDemoRelations, customerID)
 	return err
 }
 
@@ -84,7 +85,7 @@ type DeleteCustomerDemoRelationParams struct {
 
 // Deletes a specific customer-demographic relation
 func (q *Queries) DeleteCustomerDemoRelation(ctx context.Context, arg DeleteCustomerDemoRelationParams) error {
-	_, err := q.db.ExecContext(ctx, deleteCustomerDemoRelation, arg.CustomerID, arg.CustomerTypeID)
+	_, err := q.db.Exec(ctx, deleteCustomerDemoRelation, arg.CustomerID, arg.CustomerTypeID)
 	return err
 }
 
@@ -101,7 +102,7 @@ type GetCustomerDemoRelationParams struct {
 
 // Gets a specific customer-demographic relation
 func (q *Queries) GetCustomerDemoRelation(ctx context.Context, arg GetCustomerDemoRelationParams) (CustomerCustomerDemo, error) {
-	row := q.db.QueryRowContext(ctx, getCustomerDemoRelation, arg.CustomerID, arg.CustomerTypeID)
+	row := q.db.QueryRow(ctx, getCustomerDemoRelation, arg.CustomerID, arg.CustomerTypeID)
 	var i CustomerCustomerDemo
 	err := row.Scan(&i.CustomerID, &i.CustomerTypeID)
 	return i, err
@@ -121,16 +122,16 @@ ORDER BY c.company_name, cd.customer_type_id
 `
 
 type ListAllCustomerDemographicsWithDetailsRow struct {
-	CustomerID     interface{}    `json:"customer_id"`
-	CompanyName    string         `json:"company_name"`
-	ContactName    sql.NullString `json:"contact_name"`
-	CustomerTypeID interface{}    `json:"customer_type_id"`
-	CustomerDesc   sql.NullString `json:"customer_desc"`
+	CustomerID     interface{} `json:"customer_id"`
+	CompanyName    string      `json:"company_name"`
+	ContactName    pgtype.Text `json:"contact_name"`
+	CustomerTypeID interface{} `json:"customer_type_id"`
+	CustomerDesc   pgtype.Text `json:"customer_desc"`
 }
 
 // Lists all customer-demographic relations with full details from both tables
 func (q *Queries) ListAllCustomerDemographicsWithDetails(ctx context.Context) ([]ListAllCustomerDemographicsWithDetailsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAllCustomerDemographicsWithDetails)
+	rows, err := q.db.Query(ctx, listAllCustomerDemographicsWithDetails)
 	if err != nil {
 		return nil, err
 	}
@@ -149,9 +150,6 @@ func (q *Queries) ListAllCustomerDemographicsWithDetails(ctx context.Context) ([
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -167,7 +165,7 @@ WHERE ccd.customer_id = $1
 
 // Lists all demographics for a specific customer with demographic details
 func (q *Queries) ListCustomerDemographicsByCustomer(ctx context.Context, customerID interface{}) ([]CustomerDemographic, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerDemographicsByCustomer, customerID)
+	rows, err := q.db.Query(ctx, listCustomerDemographicsByCustomer, customerID)
 	if err != nil {
 		return nil, err
 	}
@@ -179,9 +177,6 @@ func (q *Queries) ListCustomerDemographicsByCustomer(ctx context.Context, custom
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -199,7 +194,7 @@ ORDER BY c.company_name
 
 // Lists all customers belonging to a specific demographic with customer details
 func (q *Queries) ListCustomersByDemographic(ctx context.Context, customerTypeID interface{}) ([]Customer, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomersByDemographic, customerTypeID)
+	rows, err := q.db.Query(ctx, listCustomersByDemographic, customerTypeID)
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +218,6 @@ func (q *Queries) ListCustomersByDemographic(ctx context.Context, customerTypeID
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

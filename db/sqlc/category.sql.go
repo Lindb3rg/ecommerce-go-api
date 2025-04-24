@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countCategories = `-- name: CountCategories :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM categories
 
 // Counts the total number of categories
 func (q *Queries) CountCategories(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCategories)
+	row := q.db.QueryRow(ctx, countCategories)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -34,14 +35,14 @@ RETURNING category_id, category_name, description, picture
 `
 
 type CreateCategoryParams struct {
-	CategoryName string         `json:"category_name"`
-	Description  sql.NullString `json:"description"`
-	Picture      []byte         `json:"picture"`
+	CategoryName string      `json:"category_name"`
+	Description  pgtype.Text `json:"description"`
+	Picture      []byte      `json:"picture"`
 }
 
 // Creates a new category and returns it
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, createCategory, arg.CategoryName, arg.Description, arg.Picture)
+	row := q.db.QueryRow(ctx, createCategory, arg.CategoryName, arg.Description, arg.Picture)
 	var i Category
 	err := row.Scan(
 		&i.CategoryID,
@@ -59,7 +60,7 @@ WHERE category_id = $1
 
 // Deletes a category by ID
 func (q *Queries) DeleteCategory(ctx context.Context, categoryID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteCategory, categoryID)
+	_, err := q.db.Exec(ctx, deleteCategory, categoryID)
 	return err
 }
 
@@ -71,7 +72,7 @@ WHERE category_id = $1
 
 // Gets a category by ID
 func (q *Queries) GetCategory(ctx context.Context, categoryID int16) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getCategory, categoryID)
+	row := q.db.QueryRow(ctx, getCategory, categoryID)
 	var i Category
 	err := row.Scan(
 		&i.CategoryID,
@@ -90,7 +91,7 @@ ORDER BY category_name
 
 // Lists all categories
 func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, listCategories)
+	rows, err := q.db.Query(ctx, listCategories)
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +108,6 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -125,8 +123,8 @@ ORDER BY category_name
 `
 
 // Searches categories by name (case insensitive)
-func (q *Queries) SearchCategoriesByName(ctx context.Context, dollar_1 sql.NullString) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, searchCategoriesByName, dollar_1)
+func (q *Queries) SearchCategoriesByName(ctx context.Context, dollar_1 pgtype.Text) ([]Category, error) {
+	rows, err := q.db.Query(ctx, searchCategoriesByName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -143,9 +141,6 @@ func (q *Queries) SearchCategoriesByName(ctx context.Context, dollar_1 sql.NullS
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -164,15 +159,15 @@ RETURNING category_id, category_name, description, picture
 `
 
 type UpdateCategoryParams struct {
-	CategoryID   int16          `json:"category_id"`
-	CategoryName string         `json:"category_name"`
-	Description  sql.NullString `json:"description"`
-	Picture      []byte         `json:"picture"`
+	CategoryID   int16       `json:"category_id"`
+	CategoryName string      `json:"category_name"`
+	Description  pgtype.Text `json:"description"`
+	Picture      []byte      `json:"picture"`
 }
 
 // Updates a category by ID
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, updateCategory,
+	row := q.db.QueryRow(ctx, updateCategory,
 		arg.CategoryID,
 		arg.CategoryName,
 		arg.Description,

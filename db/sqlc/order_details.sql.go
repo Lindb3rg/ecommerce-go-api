@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countProductsInOrder = `-- name: CountProductsInOrder :one
@@ -18,7 +19,7 @@ WHERE order_id = $1
 
 // Counts how many different products are in a specific order
 func (q *Queries) CountProductsInOrder(ctx context.Context, orderID int16) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countProductsInOrder, orderID)
+	row := q.db.QueryRow(ctx, countProductsInOrder, orderID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -47,7 +48,7 @@ type CreateOrderDetailParams struct {
 
 // Creates a new order detail and returns it
 func (q *Queries) CreateOrderDetail(ctx context.Context, arg CreateOrderDetailParams) (OrderDetail, error) {
-	row := q.db.QueryRowContext(ctx, createOrderDetail,
+	row := q.db.QueryRow(ctx, createOrderDetail,
 		arg.OrderID,
 		arg.ProductID,
 		arg.UnitPrice,
@@ -72,7 +73,7 @@ WHERE order_id = $1
 
 // Deletes all details for a specific order
 func (q *Queries) DeleteAllOrderDetails(ctx context.Context, orderID int16) error {
-	_, err := q.db.ExecContext(ctx, deleteAllOrderDetails, orderID)
+	_, err := q.db.Exec(ctx, deleteAllOrderDetails, orderID)
 	return err
 }
 
@@ -88,7 +89,7 @@ type DeleteOrderDetailParams struct {
 
 // Deletes a specific order detail
 func (q *Queries) DeleteOrderDetail(ctx context.Context, arg DeleteOrderDetailParams) error {
-	_, err := q.db.ExecContext(ctx, deleteOrderDetail, arg.OrderID, arg.ProductID)
+	_, err := q.db.Exec(ctx, deleteOrderDetail, arg.OrderID, arg.ProductID)
 	return err
 }
 
@@ -106,7 +107,7 @@ FROM (
 
 // Gets the average order value
 func (q *Queries) GetAverageOrderValue(ctx context.Context) (float64, error) {
-	row := q.db.QueryRowContext(ctx, getAverageOrderValue)
+	row := q.db.QueryRow(ctx, getAverageOrderValue)
 	var average_order_value float64
 	err := row.Scan(&average_order_value)
 	return average_order_value, err
@@ -132,7 +133,7 @@ type GetMostPopularProductsRow struct {
 
 // Gets the most popular products based on quantity ordered
 func (q *Queries) GetMostPopularProducts(ctx context.Context, limit int32) ([]GetMostPopularProductsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostPopularProducts, limit)
+	rows, err := q.db.Query(ctx, getMostPopularProducts, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +145,6 @@ func (q *Queries) GetMostPopularProducts(ctx context.Context, limit int32) ([]Ge
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -167,7 +165,7 @@ type GetOrderDetailParams struct {
 
 // Gets a specific order detail by order ID and product ID
 func (q *Queries) GetOrderDetail(ctx context.Context, arg GetOrderDetailParams) (OrderDetail, error) {
-	row := q.db.QueryRowContext(ctx, getOrderDetail, arg.OrderID, arg.ProductID)
+	row := q.db.QueryRow(ctx, getOrderDetail, arg.OrderID, arg.ProductID)
 	var i OrderDetail
 	err := row.Scan(
 		&i.OrderID,
@@ -199,22 +197,22 @@ ORDER BY p.product_name
 `
 
 type GetOrderDetailWithProductInfoRow struct {
-	OrderID         int16          `json:"order_id"`
-	ProductID       int16          `json:"product_id"`
-	UnitPrice       float32        `json:"unit_price"`
-	Quantity        int16          `json:"quantity"`
-	Discount        float32        `json:"discount"`
-	ProductName     string         `json:"product_name"`
-	SupplierID      sql.NullInt16  `json:"supplier_id"`
-	CategoryID      sql.NullInt16  `json:"category_id"`
-	QuantityPerUnit sql.NullString `json:"quantity_per_unit"`
-	Discontinued    int32          `json:"discontinued"`
-	Subtotal        int32          `json:"subtotal"`
+	OrderID         int16       `json:"order_id"`
+	ProductID       int16       `json:"product_id"`
+	UnitPrice       float32     `json:"unit_price"`
+	Quantity        int16       `json:"quantity"`
+	Discount        float32     `json:"discount"`
+	ProductName     string      `json:"product_name"`
+	SupplierID      pgtype.Int2 `json:"supplier_id"`
+	CategoryID      pgtype.Int2 `json:"category_id"`
+	QuantityPerUnit pgtype.Text `json:"quantity_per_unit"`
+	Discontinued    int32       `json:"discontinued"`
+	Subtotal        int32       `json:"subtotal"`
 }
 
 // Gets order details with product information for a specific order
 func (q *Queries) GetOrderDetailWithProductInfo(ctx context.Context, orderID int16) ([]GetOrderDetailWithProductInfoRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOrderDetailWithProductInfo, orderID)
+	rows, err := q.db.Query(ctx, getOrderDetailWithProductInfo, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -238,9 +236,6 @@ func (q *Queries) GetOrderDetailWithProductInfo(ctx context.Context, orderID int
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -266,19 +261,19 @@ ORDER BY p.product_name
 `
 
 type GetOrderDetailsWithOrderInfoRow struct {
-	OrderID     int16        `json:"order_id"`
-	OrderDate   sql.NullTime `json:"order_date"`
-	ProductID   int16        `json:"product_id"`
-	ProductName string       `json:"product_name"`
-	UnitPrice   float32      `json:"unit_price"`
-	Quantity    int16        `json:"quantity"`
-	Discount    float32      `json:"discount"`
-	Subtotal    int32        `json:"subtotal"`
+	OrderID     int16       `json:"order_id"`
+	OrderDate   pgtype.Date `json:"order_date"`
+	ProductID   int16       `json:"product_id"`
+	ProductName string      `json:"product_name"`
+	UnitPrice   float32     `json:"unit_price"`
+	Quantity    int16       `json:"quantity"`
+	Discount    float32     `json:"discount"`
+	Subtotal    int32       `json:"subtotal"`
 }
 
 // Gets order details with order and product information
 func (q *Queries) GetOrderDetailsWithOrderInfo(ctx context.Context, orderID int16) ([]GetOrderDetailsWithOrderInfoRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOrderDetailsWithOrderInfo, orderID)
+	rows, err := q.db.Query(ctx, getOrderDetailsWithOrderInfo, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -300,9 +295,6 @@ func (q *Queries) GetOrderDetailsWithOrderInfo(ctx context.Context, orderID int1
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -318,7 +310,7 @@ WHERE order_id = $1
 
 // Calculates the total amount for a specific order
 func (q *Queries) GetOrderTotal(ctx context.Context, orderID int16) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getOrderTotal, orderID)
+	row := q.db.QueryRow(ctx, getOrderTotal, orderID)
 	var order_total int64
 	err := row.Scan(&order_total)
 	return order_total, err
@@ -346,7 +338,7 @@ type GetProductSalesByCategoryRow struct {
 
 // Gets product sales grouped by category
 func (q *Queries) GetProductSalesByCategory(ctx context.Context) ([]GetProductSalesByCategoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, getProductSalesByCategory)
+	rows, err := q.db.Query(ctx, getProductSalesByCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -363,9 +355,6 @@ func (q *Queries) GetProductSalesByCategory(ctx context.Context) ([]GetProductSa
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -388,8 +377,8 @@ ORDER BY SUM(od.quantity) DESC
 `
 
 type GetProductSalesByDateRangeParams struct {
-	OrderDate   sql.NullTime `json:"order_date"`
-	OrderDate_2 sql.NullTime `json:"order_date_2"`
+	OrderDate   pgtype.Date `json:"order_date"`
+	OrderDate_2 pgtype.Date `json:"order_date_2"`
 }
 
 type GetProductSalesByDateRangeRow struct {
@@ -401,7 +390,7 @@ type GetProductSalesByDateRangeRow struct {
 
 // Gets product sales within a specific date range
 func (q *Queries) GetProductSalesByDateRange(ctx context.Context, arg GetProductSalesByDateRangeParams) ([]GetProductSalesByDateRangeRow, error) {
-	rows, err := q.db.QueryContext(ctx, getProductSalesByDateRange, arg.OrderDate, arg.OrderDate_2)
+	rows, err := q.db.Query(ctx, getProductSalesByDateRange, arg.OrderDate, arg.OrderDate_2)
 	if err != nil {
 		return nil, err
 	}
@@ -419,9 +408,6 @@ func (q *Queries) GetProductSalesByDateRange(ctx context.Context, arg GetProduct
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -436,7 +422,7 @@ WHERE order_id = $1
 
 // Gets the total quantity of items in a specific order
 func (q *Queries) GetTotalQuantityInOrder(ctx context.Context, orderID int16) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getTotalQuantityInOrder, orderID)
+	row := q.db.QueryRow(ctx, getTotalQuantityInOrder, orderID)
 	var total_items int64
 	err := row.Scan(&total_items)
 	return total_items, err
@@ -451,7 +437,7 @@ ORDER BY product_id
 
 // Lists all details for a specific order
 func (q *Queries) ListOrderDetailsByOrder(ctx context.Context, orderID int16) ([]OrderDetail, error) {
-	rows, err := q.db.QueryContext(ctx, listOrderDetailsByOrder, orderID)
+	rows, err := q.db.Query(ctx, listOrderDetailsByOrder, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -469,9 +455,6 @@ func (q *Queries) ListOrderDetailsByOrder(ctx context.Context, orderID int16) ([
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -488,7 +471,7 @@ ORDER BY order_id DESC
 
 // Lists all orders containing a specific product
 func (q *Queries) ListOrderDetailsByProduct(ctx context.Context, productID int16) ([]OrderDetail, error) {
-	rows, err := q.db.QueryContext(ctx, listOrderDetailsByProduct, productID)
+	rows, err := q.db.Query(ctx, listOrderDetailsByProduct, productID)
 	if err != nil {
 		return nil, err
 	}
@@ -506,9 +489,6 @@ func (q *Queries) ListOrderDetailsByProduct(ctx context.Context, productID int16
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -536,7 +516,7 @@ type UpdateOrderDetailParams struct {
 
 // Updates an order detail by order ID and product ID
 func (q *Queries) UpdateOrderDetail(ctx context.Context, arg UpdateOrderDetailParams) (OrderDetail, error) {
-	row := q.db.QueryRowContext(ctx, updateOrderDetail,
+	row := q.db.QueryRow(ctx, updateOrderDetail,
 		arg.OrderID,
 		arg.ProductID,
 		arg.UnitPrice,
@@ -569,7 +549,7 @@ type UpdateOrderDetailQuantityParams struct {
 
 // Updates only the quantity of an order detail
 func (q *Queries) UpdateOrderDetailQuantity(ctx context.Context, arg UpdateOrderDetailQuantityParams) (OrderDetail, error) {
-	row := q.db.QueryRowContext(ctx, updateOrderDetailQuantity, arg.OrderID, arg.ProductID, arg.Quantity)
+	row := q.db.QueryRow(ctx, updateOrderDetailQuantity, arg.OrderID, arg.ProductID, arg.Quantity)
 	var i OrderDetail
 	err := row.Scan(
 		&i.OrderID,

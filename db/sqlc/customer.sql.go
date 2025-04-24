@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countCustomers = `-- name: CountCustomers :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM customers
 
 // Counts the total number of customers
 func (q *Queries) CountCustomers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomers)
+	row := q.db.QueryRow(ctx, countCustomers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -30,13 +31,13 @@ ORDER BY COUNT(*) DESC
 `
 
 type CountCustomersByCountryRow struct {
-	Country       sql.NullString `json:"country"`
-	CustomerCount int64          `json:"customer_count"`
+	Country       pgtype.Text `json:"country"`
+	CustomerCount int64       `json:"customer_count"`
 }
 
 // Counts customers grouped by country
 func (q *Queries) CountCustomersByCountry(ctx context.Context) ([]CountCustomersByCountryRow, error) {
-	rows, err := q.db.QueryContext(ctx, countCustomersByCountry)
+	rows, err := q.db.Query(ctx, countCustomersByCountry)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +49,6 @@ func (q *Queries) CountCustomersByCountry(ctx context.Context) ([]CountCustomers
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -78,22 +76,22 @@ RETURNING customer_id, company_name, contact_name, contact_title, address, city,
 `
 
 type CreateCustomerParams struct {
-	CustomerID   interface{}    `json:"customer_id"`
-	CompanyName  string         `json:"company_name"`
-	ContactName  sql.NullString `json:"contact_name"`
-	ContactTitle sql.NullString `json:"contact_title"`
-	Address      sql.NullString `json:"address"`
-	City         sql.NullString `json:"city"`
-	Region       sql.NullString `json:"region"`
-	PostalCode   sql.NullString `json:"postal_code"`
-	Country      sql.NullString `json:"country"`
-	Phone        sql.NullString `json:"phone"`
-	Fax          sql.NullString `json:"fax"`
+	CustomerID   interface{} `json:"customer_id"`
+	CompanyName  string      `json:"company_name"`
+	ContactName  pgtype.Text `json:"contact_name"`
+	ContactTitle pgtype.Text `json:"contact_title"`
+	Address      pgtype.Text `json:"address"`
+	City         pgtype.Text `json:"city"`
+	Region       pgtype.Text `json:"region"`
+	PostalCode   pgtype.Text `json:"postal_code"`
+	Country      pgtype.Text `json:"country"`
+	Phone        pgtype.Text `json:"phone"`
+	Fax          pgtype.Text `json:"fax"`
 }
 
 // Creates a new customer and returns it
 func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
-	row := q.db.QueryRowContext(ctx, createCustomer,
+	row := q.db.QueryRow(ctx, createCustomer,
 		arg.CustomerID,
 		arg.CompanyName,
 		arg.ContactName,
@@ -130,7 +128,7 @@ WHERE customer_id = $1
 
 // Deletes a customer by ID
 func (q *Queries) DeleteCustomer(ctx context.Context, customerID interface{}) error {
-	_, err := q.db.ExecContext(ctx, deleteCustomer, customerID)
+	_, err := q.db.Exec(ctx, deleteCustomer, customerID)
 	return err
 }
 
@@ -142,7 +140,7 @@ WHERE customer_id = $1
 
 // Gets a customer by ID
 func (q *Queries) GetCustomer(ctx context.Context, customerID interface{}) (Customer, error) {
-	row := q.db.QueryRowContext(ctx, getCustomer, customerID)
+	row := q.db.QueryRow(ctx, getCustomer, customerID)
 	var i Customer
 	err := row.Scan(
 		&i.CustomerID,
@@ -168,7 +166,7 @@ ORDER BY company_name
 
 // Lists all customers
 func (q *Queries) ListCustomers(ctx context.Context) ([]Customer, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomers)
+	rows, err := q.db.Query(ctx, listCustomers)
 	if err != nil {
 		return nil, err
 	}
@@ -192,9 +190,6 @@ func (q *Queries) ListCustomers(ctx context.Context) ([]Customer, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -210,8 +205,8 @@ ORDER BY company_name
 `
 
 // Lists all customers from a specific city
-func (q *Queries) ListCustomersByCity(ctx context.Context, city sql.NullString) ([]Customer, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomersByCity, city)
+func (q *Queries) ListCustomersByCity(ctx context.Context, city pgtype.Text) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, listCustomersByCity, city)
 	if err != nil {
 		return nil, err
 	}
@@ -235,9 +230,6 @@ func (q *Queries) ListCustomersByCity(ctx context.Context, city sql.NullString) 
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -253,8 +245,8 @@ ORDER BY company_name
 `
 
 // Lists all customers from a specific country
-func (q *Queries) ListCustomersByCountry(ctx context.Context, country sql.NullString) ([]Customer, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomersByCountry, country)
+func (q *Queries) ListCustomersByCountry(ctx context.Context, country pgtype.Text) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, listCustomersByCountry, country)
 	if err != nil {
 		return nil, err
 	}
@@ -278,9 +270,6 @@ func (q *Queries) ListCustomersByCountry(ctx context.Context, country sql.NullSt
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -296,8 +285,8 @@ ORDER BY company_name
 `
 
 // Searches customers by company name (case insensitive)
-func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, dollar_1 sql.NullString) ([]Customer, error) {
-	rows, err := q.db.QueryContext(ctx, searchCustomersByCompanyName, dollar_1)
+func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, dollar_1 pgtype.Text) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, searchCustomersByCompanyName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -321,9 +310,6 @@ func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, dollar_1 sql
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -339,8 +325,8 @@ ORDER BY contact_name
 `
 
 // Searches customers by contact name (case insensitive)
-func (q *Queries) SearchCustomersByContactName(ctx context.Context, dollar_1 sql.NullString) ([]Customer, error) {
-	rows, err := q.db.QueryContext(ctx, searchCustomersByContactName, dollar_1)
+func (q *Queries) SearchCustomersByContactName(ctx context.Context, dollar_1 pgtype.Text) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, searchCustomersByContactName, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -364,9 +350,6 @@ func (q *Queries) SearchCustomersByContactName(ctx context.Context, dollar_1 sql
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -392,22 +375,22 @@ RETURNING customer_id, company_name, contact_name, contact_title, address, city,
 `
 
 type UpdateCustomerParams struct {
-	CustomerID   interface{}    `json:"customer_id"`
-	CompanyName  string         `json:"company_name"`
-	ContactName  sql.NullString `json:"contact_name"`
-	ContactTitle sql.NullString `json:"contact_title"`
-	Address      sql.NullString `json:"address"`
-	City         sql.NullString `json:"city"`
-	Region       sql.NullString `json:"region"`
-	PostalCode   sql.NullString `json:"postal_code"`
-	Country      sql.NullString `json:"country"`
-	Phone        sql.NullString `json:"phone"`
-	Fax          sql.NullString `json:"fax"`
+	CustomerID   interface{} `json:"customer_id"`
+	CompanyName  string      `json:"company_name"`
+	ContactName  pgtype.Text `json:"contact_name"`
+	ContactTitle pgtype.Text `json:"contact_title"`
+	Address      pgtype.Text `json:"address"`
+	City         pgtype.Text `json:"city"`
+	Region       pgtype.Text `json:"region"`
+	PostalCode   pgtype.Text `json:"postal_code"`
+	Country      pgtype.Text `json:"country"`
+	Phone        pgtype.Text `json:"phone"`
+	Fax          pgtype.Text `json:"fax"`
 }
 
 // Updates a customer by ID
 func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (Customer, error) {
-	row := q.db.QueryRowContext(ctx, updateCustomer,
+	row := q.db.QueryRow(ctx, updateCustomer,
 		arg.CustomerID,
 		arg.CompanyName,
 		arg.ContactName,

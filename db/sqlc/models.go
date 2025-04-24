@@ -5,28 +5,28 @@
 package db
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Category struct {
-	CategoryID   int16          `json:"category_id"`
-	CategoryName string         `json:"category_name"`
-	Description  sql.NullString `json:"description"`
-	Picture      []byte         `json:"picture"`
+	CategoryID   int16       `json:"category_id"`
+	CategoryName string      `json:"category_name"`
+	Description  pgtype.Text `json:"description"`
+	Picture      []byte      `json:"picture"`
 }
 
 type Customer struct {
-	CustomerID   interface{}    `json:"customer_id"`
-	CompanyName  string         `json:"company_name"`
-	ContactName  sql.NullString `json:"contact_name"`
-	ContactTitle sql.NullString `json:"contact_title"`
-	Address      sql.NullString `json:"address"`
-	City         sql.NullString `json:"city"`
-	Region       sql.NullString `json:"region"`
-	PostalCode   sql.NullString `json:"postal_code"`
-	Country      sql.NullString `json:"country"`
-	Phone        sql.NullString `json:"phone"`
-	Fax          sql.NullString `json:"fax"`
+	CustomerID   interface{} `json:"customer_id"`
+	CompanyName  string      `json:"company_name"`
+	ContactName  pgtype.Text `json:"contact_name"`
+	ContactTitle pgtype.Text `json:"contact_title"`
+	Address      pgtype.Text `json:"address"`
+	City         pgtype.Text `json:"city"`
+	Region       pgtype.Text `json:"region"`
+	PostalCode   pgtype.Text `json:"postal_code"`
+	Country      pgtype.Text `json:"country"`
+	Phone        pgtype.Text `json:"phone"`
+	Fax          pgtype.Text `json:"fax"`
 }
 
 type CustomerCustomerDemo struct {
@@ -35,29 +35,29 @@ type CustomerCustomerDemo struct {
 }
 
 type CustomerDemographic struct {
-	CustomerTypeID interface{}    `json:"customer_type_id"`
-	CustomerDesc   sql.NullString `json:"customer_desc"`
+	CustomerTypeID interface{} `json:"customer_type_id"`
+	CustomerDesc   pgtype.Text `json:"customer_desc"`
 }
 
 type Employee struct {
-	EmployeeID      int16          `json:"employee_id"`
-	LastName        string         `json:"last_name"`
-	FirstName       string         `json:"first_name"`
-	Title           sql.NullString `json:"title"`
-	TitleOfCourtesy sql.NullString `json:"title_of_courtesy"`
-	BirthDate       sql.NullTime   `json:"birth_date"`
-	HireDate        sql.NullTime   `json:"hire_date"`
-	Address         sql.NullString `json:"address"`
-	City            sql.NullString `json:"city"`
-	Region          sql.NullString `json:"region"`
-	PostalCode      sql.NullString `json:"postal_code"`
-	Country         sql.NullString `json:"country"`
-	HomePhone       sql.NullString `json:"home_phone"`
-	Extension       sql.NullString `json:"extension"`
-	Photo           []byte         `json:"photo"`
-	Notes           sql.NullString `json:"notes"`
-	ReportsTo       sql.NullInt16  `json:"reports_to"`
-	PhotoPath       sql.NullString `json:"photo_path"`
+	EmployeeID      int16       `json:"employee_id"`
+	LastName        string      `json:"last_name"`
+	FirstName       string      `json:"first_name"`
+	Title           pgtype.Text `json:"title"`
+	TitleOfCourtesy pgtype.Text `json:"title_of_courtesy"`
+	BirthDate       pgtype.Date `json:"birth_date"`
+	HireDate        pgtype.Date `json:"hire_date"`
+	Address         pgtype.Text `json:"address"`
+	City            pgtype.Text `json:"city"`
+	Region          pgtype.Text `json:"region"`
+	PostalCode      pgtype.Text `json:"postal_code"`
+	Country         pgtype.Text `json:"country"`
+	HomePhone       pgtype.Text `json:"home_phone"`
+	Extension       pgtype.Text `json:"extension"`
+	Photo           []byte      `json:"photo"`
+	Notes           pgtype.Text `json:"notes"`
+	ReportsTo       pgtype.Int2 `json:"reports_to"`
+	PhotoPath       pgtype.Text `json:"photo_path"`
 }
 
 type EmployeeTerritory struct {
@@ -66,20 +66,20 @@ type EmployeeTerritory struct {
 }
 
 type Order struct {
-	OrderID        int16           `json:"order_id"`
-	CustomerID     interface{}     `json:"customer_id"`
-	EmployeeID     sql.NullInt16   `json:"employee_id"`
-	OrderDate      sql.NullTime    `json:"order_date"`
-	RequiredDate   sql.NullTime    `json:"required_date"`
-	ShippedDate    sql.NullTime    `json:"shipped_date"`
-	ShipVia        sql.NullInt16   `json:"ship_via"`
-	Freight        sql.NullFloat64 `json:"freight"`
-	ShipName       sql.NullString  `json:"ship_name"`
-	ShipAddress    sql.NullString  `json:"ship_address"`
-	ShipCity       sql.NullString  `json:"ship_city"`
-	ShipRegion     sql.NullString  `json:"ship_region"`
-	ShipPostalCode sql.NullString  `json:"ship_postal_code"`
-	ShipCountry    sql.NullString  `json:"ship_country"`
+	OrderID        int16         `json:"order_id"`
+	CustomerID     interface{}   `json:"customer_id"`
+	EmployeeID     pgtype.Int2   `json:"employee_id"`
+	OrderDate      pgtype.Date   `json:"order_date"`
+	RequiredDate   pgtype.Date   `json:"required_date"`
+	ShippedDate    pgtype.Date   `json:"shipped_date"`
+	ShipVia        pgtype.Int2   `json:"ship_via"`
+	Freight        pgtype.Float4 `json:"freight"`
+	ShipName       pgtype.Text   `json:"ship_name"`
+	ShipAddress    pgtype.Text   `json:"ship_address"`
+	ShipCity       pgtype.Text   `json:"ship_city"`
+	ShipRegion     pgtype.Text   `json:"ship_region"`
+	ShipPostalCode pgtype.Text   `json:"ship_postal_code"`
+	ShipCountry    pgtype.Text   `json:"ship_country"`
 }
 
 type OrderDetail struct {
@@ -91,16 +91,16 @@ type OrderDetail struct {
 }
 
 type Product struct {
-	ProductID       int16           `json:"product_id"`
-	ProductName     string          `json:"product_name"`
-	SupplierID      sql.NullInt16   `json:"supplier_id"`
-	CategoryID      sql.NullInt16   `json:"category_id"`
-	QuantityPerUnit sql.NullString  `json:"quantity_per_unit"`
-	UnitPrice       sql.NullFloat64 `json:"unit_price"`
-	UnitsInStock    sql.NullInt16   `json:"units_in_stock"`
-	UnitsOnOrder    sql.NullInt16   `json:"units_on_order"`
-	ReorderLevel    sql.NullInt16   `json:"reorder_level"`
-	Discontinued    int32           `json:"discontinued"`
+	ProductID       int16         `json:"product_id"`
+	ProductName     string        `json:"product_name"`
+	SupplierID      pgtype.Int2   `json:"supplier_id"`
+	CategoryID      pgtype.Int2   `json:"category_id"`
+	QuantityPerUnit pgtype.Text   `json:"quantity_per_unit"`
+	UnitPrice       pgtype.Float4 `json:"unit_price"`
+	UnitsInStock    pgtype.Int2   `json:"units_in_stock"`
+	UnitsOnOrder    pgtype.Int2   `json:"units_on_order"`
+	ReorderLevel    pgtype.Int2   `json:"reorder_level"`
+	Discontinued    int32         `json:"discontinued"`
 }
 
 type Region struct {
@@ -109,24 +109,24 @@ type Region struct {
 }
 
 type Shipper struct {
-	ShipperID   int16          `json:"shipper_id"`
-	CompanyName string         `json:"company_name"`
-	Phone       sql.NullString `json:"phone"`
+	ShipperID   int16       `json:"shipper_id"`
+	CompanyName string      `json:"company_name"`
+	Phone       pgtype.Text `json:"phone"`
 }
 
 type Supplier struct {
-	SupplierID   int16          `json:"supplier_id"`
-	CompanyName  string         `json:"company_name"`
-	ContactName  sql.NullString `json:"contact_name"`
-	ContactTitle sql.NullString `json:"contact_title"`
-	Address      sql.NullString `json:"address"`
-	City         sql.NullString `json:"city"`
-	Region       sql.NullString `json:"region"`
-	PostalCode   sql.NullString `json:"postal_code"`
-	Country      sql.NullString `json:"country"`
-	Phone        sql.NullString `json:"phone"`
-	Fax          sql.NullString `json:"fax"`
-	Homepage     sql.NullString `json:"homepage"`
+	SupplierID   int16       `json:"supplier_id"`
+	CompanyName  string      `json:"company_name"`
+	ContactName  pgtype.Text `json:"contact_name"`
+	ContactTitle pgtype.Text `json:"contact_title"`
+	Address      pgtype.Text `json:"address"`
+	City         pgtype.Text `json:"city"`
+	Region       pgtype.Text `json:"region"`
+	PostalCode   pgtype.Text `json:"postal_code"`
+	Country      pgtype.Text `json:"country"`
+	Phone        pgtype.Text `json:"phone"`
+	Fax          pgtype.Text `json:"fax"`
+	Homepage     pgtype.Text `json:"homepage"`
 }
 
 type Territory struct {
@@ -136,8 +136,8 @@ type Territory struct {
 }
 
 type UsState struct {
-	EmployeeID  int16          `json:"employee_id"`
-	StateName   sql.NullString `json:"state_name"`
-	StateAbbr   sql.NullString `json:"state_abbr"`
-	StateRegion sql.NullString `json:"state_region"`
+	EmployeeID  int16       `json:"employee_id"`
+	StateName   pgtype.Text `json:"state_name"`
+	StateAbbr   pgtype.Text `json:"state_abbr"`
+	StateRegion pgtype.Text `json:"state_region"`
 }
