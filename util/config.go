@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
@@ -34,8 +33,18 @@ func LoadConfig(path string) (config Config, err error) {
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		fmt.Println("Config file not found, using environment variables")
-		return config, err
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			viper.SetConfigName("test")
+			viper.SetConfigType("env")
+			viper.AutomaticEnv()
+			err = viper.ReadInConfig()
+
+			if err != nil {
+				return config, err
+			}
+		} else {
+			return config, err
+		}
 	}
 
 	err = viper.Unmarshal(&config)
