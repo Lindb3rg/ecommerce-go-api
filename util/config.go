@@ -35,7 +35,7 @@ func LoadConfig(path string) (config Config, err error) {
 	err = viper.ReadInConfig()
 	if err != nil {
 		fmt.Println("Config file not found, using environment variables")
-		return
+		return config, err
 	}
 
 	err = viper.Unmarshal(&config)
