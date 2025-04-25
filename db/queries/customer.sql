@@ -8,7 +8,9 @@ WHERE customer_id = $1;
 -- Lists all customers
 SELECT *
 FROM customers
-ORDER BY company_name;
+ORDER BY company_name
+LIMIT $1 OFFSET $2;
+
 
 -- name: CreateCustomer :one
 -- Creates a new customer and returns it

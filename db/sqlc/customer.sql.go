@@ -162,11 +162,17 @@ const listCustomers = `-- name: ListCustomers :many
 SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
 FROM customers
 ORDER BY company_name
+LIMIT $1 OFFSET $2
 `
 
+type ListCustomersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
 // Lists all customers
-func (q *Queries) ListCustomers(ctx context.Context) ([]Customer, error) {
-	rows, err := q.db.Query(ctx, listCustomers)
+func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, listCustomers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

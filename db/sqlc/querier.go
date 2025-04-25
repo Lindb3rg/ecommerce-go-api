@@ -206,7 +206,7 @@ type Querier interface {
 	// Lists all demographics for a specific customer with demographic details
 	ListCustomerDemographicsByCustomer(ctx context.Context, customerID interface{}) ([]CustomerDemographic, error)
 	// Lists all customers
-	ListCustomers(ctx context.Context) ([]Customer, error)
+	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]Customer, error)
 	// Lists all customers from a specific city
 	ListCustomersByCity(ctx context.Context, city pgtype.Text) ([]Customer, error)
 	// Lists all customers from a specific country

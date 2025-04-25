@@ -23,22 +23,20 @@ type Config struct {
 	EmailSenderName      string        `mapstructure:"EMAIL_SENDER_NAME"`
 	EmailSenderAddress   string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
 	EmailSenderPassword  string        `mapstructure:"EMAIL_SENDER_PASSWORD"`
+	TrustedProxies       []string      `mapstructure:"TRUSTED_PROXIES"`
 }
 
-// LoadConfig reads configuration from file or environment variables.
 func LoadConfig(path string) (config Config, err error) {
 	viper.AddConfigPath(path)
 	viper.SetConfigName("app")
 	viper.SetConfigType("env")
-
 	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
-	// If file not found, it's okay - we'll use env vars
-	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-		return config, err
+	if err != nil {
+		fmt.Println("Config file not found, using environment variables")
+		return
 	}
-	fmt.Println("Config file not found, using environment variables")
 
 	err = viper.Unmarshal(&config)
 	return

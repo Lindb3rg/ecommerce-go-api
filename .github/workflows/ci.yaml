@@ -17,9 +17,9 @@ jobs:
       # Setting up postgres docker image
       postgres:
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: ecommerce-db
         image: postgres:15-alpine
         ports:
         # Map to correct port
@@ -52,9 +52,9 @@ jobs:
       # Running make command for migrate up
     
     - name: Run migrations directly
-      run: migrate -path db/migration -database "postgresql://postgres:postgres@localhost:5432/test_db?sslmode=disable" -verbose up
+      run: migrate -path db/migration -database "postgresql://root:secret@localhost:5432/ecommerce-db?sslmode=disable" -verbose up
 
     - name: Run tests
       run: go test -v ./...
       env:
-        DB_URL: postgresql://postgres:postgres@localhost:5432/test_db?sslmode=disable
+        DB_URL: postgresql://root:secret@localhost:5432/ecommerce-db?sslmode=disable

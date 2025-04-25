@@ -24,6 +24,13 @@ func RandomString(n int) string {
 	return sb.String()
 }
 
+func formatIntoPgTypeText(text string) pgtype.Text {
+	return pgtype.Text{
+		String: text,
+		Valid:  true,
+	}
+}
+
 func RandomPgText(n int) pgtype.Text {
 	return pgtype.Text{
 		String: RandomString(n),
