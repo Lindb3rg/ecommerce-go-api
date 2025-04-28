@@ -16,17 +16,19 @@ type Category struct {
 }
 
 type Customer struct {
-	CustomerID   interface{} `json:"customer_id"`
-	CompanyName  string      `json:"company_name"`
-	ContactName  pgtype.Text `json:"contact_name"`
-	ContactTitle pgtype.Text `json:"contact_title"`
-	Address      pgtype.Text `json:"address"`
-	City         pgtype.Text `json:"city"`
-	Region       pgtype.Text `json:"region"`
-	PostalCode   pgtype.Text `json:"postal_code"`
-	Country      pgtype.Text `json:"country"`
-	Phone        pgtype.Text `json:"phone"`
-	Fax          pgtype.Text `json:"fax"`
+	CustomerID   interface{}        `json:"customer_id"`
+	CompanyName  string             `json:"company_name"`
+	ContactName  pgtype.Text        `json:"contact_name"`
+	ContactTitle pgtype.Text        `json:"contact_title"`
+	Address      pgtype.Text        `json:"address"`
+	City         pgtype.Text        `json:"city"`
+	Region       pgtype.Text        `json:"region"`
+	PostalCode   pgtype.Text        `json:"postal_code"`
+	Country      pgtype.Text        `json:"country"`
+	Phone        pgtype.Text        `json:"phone"`
+	Fax          pgtype.Text        `json:"fax"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	Active       pgtype.Bool        `json:"active"`
 }
 
 type CustomerCustomerDemo struct {
@@ -40,24 +42,26 @@ type CustomerDemographic struct {
 }
 
 type Employee struct {
-	EmployeeID      int16       `json:"employee_id"`
-	LastName        string      `json:"last_name"`
-	FirstName       string      `json:"first_name"`
-	Title           pgtype.Text `json:"title"`
-	TitleOfCourtesy pgtype.Text `json:"title_of_courtesy"`
-	BirthDate       pgtype.Date `json:"birth_date"`
-	HireDate        pgtype.Date `json:"hire_date"`
-	Address         pgtype.Text `json:"address"`
-	City            pgtype.Text `json:"city"`
-	Region          pgtype.Text `json:"region"`
-	PostalCode      pgtype.Text `json:"postal_code"`
-	Country         pgtype.Text `json:"country"`
-	HomePhone       pgtype.Text `json:"home_phone"`
-	Extension       pgtype.Text `json:"extension"`
-	Photo           []byte      `json:"photo"`
-	Notes           pgtype.Text `json:"notes"`
-	ReportsTo       pgtype.Int2 `json:"reports_to"`
-	PhotoPath       pgtype.Text `json:"photo_path"`
+	EmployeeID      int16              `json:"employee_id"`
+	LastName        string             `json:"last_name"`
+	FirstName       string             `json:"first_name"`
+	Title           pgtype.Text        `json:"title"`
+	TitleOfCourtesy pgtype.Text        `json:"title_of_courtesy"`
+	BirthDate       pgtype.Date        `json:"birth_date"`
+	HireDate        pgtype.Date        `json:"hire_date"`
+	Address         pgtype.Text        `json:"address"`
+	City            pgtype.Text        `json:"city"`
+	Region          pgtype.Text        `json:"region"`
+	PostalCode      pgtype.Text        `json:"postal_code"`
+	Country         pgtype.Text        `json:"country"`
+	HomePhone       pgtype.Text        `json:"home_phone"`
+	Extension       pgtype.Text        `json:"extension"`
+	Photo           []byte             `json:"photo"`
+	Notes           pgtype.Text        `json:"notes"`
+	ReportsTo       pgtype.Int2        `json:"reports_to"`
+	PhotoPath       pgtype.Text        `json:"photo_path"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	Active          pgtype.Bool        `json:"active"`
 }
 
 type EmployeeTerritory struct {

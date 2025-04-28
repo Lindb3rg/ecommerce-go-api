@@ -49,7 +49,7 @@ WHERE customer_id = $1
 RETURNING *;
 
 -- name: DeleteCustomer :exec
--- Deletes a customer by ID
+-- OBS! Completely deletes a customer by customer_id
 DELETE FROM customers
 WHERE customer_id = $1;
 
@@ -81,7 +81,7 @@ FROM customers
 WHERE city = $1
 ORDER BY company_name;
 
--- name: CountCustomers :one
+-- name: CountAllCustomers :one
 -- Counts the total number of customers
 SELECT COUNT(*) FROM customers;
 
@@ -91,3 +91,17 @@ SELECT country, COUNT(*) as customer_count
 FROM customers
 GROUP BY country
 ORDER BY COUNT(*) DESC;
+
+-- name: ListDistinctCountries :many
+-- Returns all distinct countries in the customers table
+SELECT DISTINCT country
+FROM customers
+WHERE country IS NOT NULL
+ORDER BY country;
+
+-- name: ToggleCustomerActiveStatus :one
+-- Toggles the active status of a customer by ID
+UPDATE customers
+SET active = NOT active
+WHERE customer_id = $1
+RETURNING *;

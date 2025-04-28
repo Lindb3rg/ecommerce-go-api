@@ -11,12 +11,12 @@ import (
 )
 
 type Querier interface {
+	// Counts the total number of customers
+	CountAllCustomers(ctx context.Context) (int64, error)
 	// Counts the total number of categories
 	CountCategories(ctx context.Context) (int64, error)
 	// Counts the total number of customer demographics
 	CountCustomerDemographics(ctx context.Context) (int64, error)
-	// Counts the total number of customers
-	CountCustomers(ctx context.Context) (int64, error)
 	// Counts customers grouped by country
 	CountCustomersByCountry(ctx context.Context) ([]CountCustomersByCountryRow, error)
 	// Counts how many customers belong to a specific demographic
@@ -97,7 +97,7 @@ type Querier interface {
 	DeleteAllTerritoryAssignmentsForEmployee(ctx context.Context, employeeID int16) error
 	// Deletes a category by ID
 	DeleteCategory(ctx context.Context, categoryID int16) error
-	// Deletes a customer by ID
+	// OBS! Completely deletes a customer by customer_id
 	DeleteCustomer(ctx context.Context, customerID interface{}) error
 	// Deletes a specific customer-demographic relation
 	DeleteCustomerDemoRelation(ctx context.Context, arg DeleteCustomerDemoRelationParams) error
@@ -217,6 +217,8 @@ type Querier interface {
 	ListDelayedOrders(ctx context.Context) ([]Order, error)
 	// Lists all discontinued products
 	ListDiscontinuedProducts(ctx context.Context) ([]Product, error)
+	// Returns all distinct countries in the customers table
+	ListDistinctCountries(ctx context.Context) ([]pgtype.Text, error)
 	// Lists all employees
 	ListEmployees(ctx context.Context) ([]Employee, error)
 	// Lists all employees from a specific country
@@ -303,6 +305,8 @@ type Querier interface {
 	SearchSuppliersByContactName(ctx context.Context, dollar_1 pgtype.Text) ([]Supplier, error)
 	// Searches territories by description (case insensitive)
 	SearchTerritoriesByDescription(ctx context.Context, dollar_1 pgtype.Text) ([]Territory, error)
+	// Toggles the active status of a customer by ID
+	ToggleCustomerActiveStatus(ctx context.Context, customerID interface{}) (Customer, error)
 	// Updates a category by ID
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	// Updates a customer by ID

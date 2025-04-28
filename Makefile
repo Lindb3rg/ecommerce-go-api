@@ -1,3 +1,5 @@
+include app.env
+
 postgres:
 	docker run --name postgres-ecommerce -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD="$(POSTGRES_PASSWORD)" -d postgres:latest
 

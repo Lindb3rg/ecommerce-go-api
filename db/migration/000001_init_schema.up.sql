@@ -73,7 +73,9 @@ CREATE TABLE customers (
     postal_code character varying(10),
     country character varying(15),
     phone character varying(24),
-    fax character varying(24)
+    fax character varying(24),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	active BOOLEAN DEFAULT TRUE
 );
 
 --
@@ -111,6 +113,8 @@ CREATE TABLE employees (
     notes text,
     reports_to smallint,
     photo_path character varying(255),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	active BOOLEAN DEFAULT TRUE,
 	FOREIGN KEY (reports_to) REFERENCES employees
 );
 

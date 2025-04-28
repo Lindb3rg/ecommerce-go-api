@@ -90,7 +90,7 @@ INSERT INTO employees (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
-RETURNING employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+RETURNING employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 `
 
 type CreateEmployeeParams struct {
@@ -154,6 +154,8 @@ func (q *Queries) CreateEmployee(ctx context.Context, arg CreateEmployeeParams) 
 		&i.Notes,
 		&i.ReportsTo,
 		&i.PhotoPath,
+		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }
@@ -170,7 +172,7 @@ func (q *Queries) DeleteEmployee(ctx context.Context, employeeID int16) error {
 }
 
 const getEmployee = `-- name: GetEmployee :one
-SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 FROM employees
 WHERE employee_id = $1
 `
@@ -198,6 +200,8 @@ func (q *Queries) GetEmployee(ctx context.Context, employeeID int16) (Employee, 
 		&i.Notes,
 		&i.ReportsTo,
 		&i.PhotoPath,
+		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }
@@ -360,7 +364,7 @@ func (q *Queries) GetEmployeeWithManager(ctx context.Context, employeeID int16) 
 }
 
 const listEmployees = `-- name: ListEmployees :many
-SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 FROM employees
 ORDER BY last_name, first_name
 `
@@ -394,6 +398,8 @@ func (q *Queries) ListEmployees(ctx context.Context) ([]Employee, error) {
 			&i.Notes,
 			&i.ReportsTo,
 			&i.PhotoPath,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -406,7 +412,7 @@ func (q *Queries) ListEmployees(ctx context.Context) ([]Employee, error) {
 }
 
 const listEmployeesByCountry = `-- name: ListEmployeesByCountry :many
-SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 FROM employees
 WHERE country = $1
 ORDER BY last_name, first_name
@@ -441,6 +447,8 @@ func (q *Queries) ListEmployeesByCountry(ctx context.Context, country pgtype.Tex
 			&i.Notes,
 			&i.ReportsTo,
 			&i.PhotoPath,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -453,7 +461,7 @@ func (q *Queries) ListEmployeesByCountry(ctx context.Context, country pgtype.Tex
 }
 
 const listEmployeesByManager = `-- name: ListEmployeesByManager :many
-SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 FROM employees
 WHERE reports_to = $1
 ORDER BY last_name, first_name
@@ -488,6 +496,8 @@ func (q *Queries) ListEmployeesByManager(ctx context.Context, reportsTo pgtype.I
 			&i.Notes,
 			&i.ReportsTo,
 			&i.PhotoPath,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -500,7 +510,7 @@ func (q *Queries) ListEmployeesByManager(ctx context.Context, reportsTo pgtype.I
 }
 
 const listEmployeesByTitle = `-- name: ListEmployeesByTitle :many
-SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 FROM employees
 WHERE title = $1
 ORDER BY last_name, first_name
@@ -535,6 +545,8 @@ func (q *Queries) ListEmployeesByTitle(ctx context.Context, title pgtype.Text) (
 			&i.Notes,
 			&i.ReportsTo,
 			&i.PhotoPath,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -547,7 +559,7 @@ func (q *Queries) ListEmployeesByTitle(ctx context.Context, title pgtype.Text) (
 }
 
 const searchEmployeesByName = `-- name: SearchEmployeesByName :many
-SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+SELECT employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 FROM employees
 WHERE first_name ILIKE '%' || $1 || '%' OR last_name ILIKE '%' || $1 || '%'
 ORDER BY last_name, first_name
@@ -582,6 +594,8 @@ func (q *Queries) SearchEmployeesByName(ctx context.Context, dollar_1 pgtype.Tex
 			&i.Notes,
 			&i.ReportsTo,
 			&i.PhotoPath,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -614,7 +628,7 @@ SET
   reports_to = $17,
   photo_path = $18
 WHERE employee_id = $1
-RETURNING employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path
+RETURNING employee_id, last_name, first_name, title, title_of_courtesy, birth_date, hire_date, address, city, region, postal_code, country, home_phone, extension, photo, notes, reports_to, photo_path, created_at, active
 `
 
 type UpdateEmployeeParams struct {
@@ -680,6 +694,8 @@ func (q *Queries) UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) 
 		&i.Notes,
 		&i.ReportsTo,
 		&i.PhotoPath,
+		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }

@@ -221,7 +221,7 @@ func (q *Queries) ListEmployeesByRegion(ctx context.Context, regionID int16) ([]
 }
 
 const listEmployeesByTerritory = `-- name: ListEmployeesByTerritory :many
-SELECT e.employee_id, e.last_name, e.first_name, e.title, e.title_of_courtesy, e.birth_date, e.hire_date, e.address, e.city, e.region, e.postal_code, e.country, e.home_phone, e.extension, e.photo, e.notes, e.reports_to, e.photo_path
+SELECT e.employee_id, e.last_name, e.first_name, e.title, e.title_of_courtesy, e.birth_date, e.hire_date, e.address, e.city, e.region, e.postal_code, e.country, e.home_phone, e.extension, e.photo, e.notes, e.reports_to, e.photo_path, e.created_at, e.active
 FROM employee_territories et
 JOIN employees e ON et.employee_id = e.employee_id
 WHERE et.territory_id = $1
@@ -257,6 +257,8 @@ func (q *Queries) ListEmployeesByTerritory(ctx context.Context, territoryID stri
 			&i.Notes,
 			&i.ReportsTo,
 			&i.PhotoPath,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}

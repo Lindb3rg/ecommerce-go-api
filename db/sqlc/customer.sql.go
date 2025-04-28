@@ -11,13 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countCustomers = `-- name: CountCustomers :one
+const countAllCustomers = `-- name: CountAllCustomers :one
 SELECT COUNT(*) FROM customers
 `
 
 // Counts the total number of customers
-func (q *Queries) CountCustomers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countCustomers)
+func (q *Queries) CountAllCustomers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllCustomers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -72,7 +72,7 @@ INSERT INTO customers (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
-RETURNING customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+RETURNING customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 `
 
 type CreateCustomerParams struct {
@@ -117,6 +117,8 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.Country,
 		&i.Phone,
 		&i.Fax,
+		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }
@@ -126,14 +128,14 @@ DELETE FROM customers
 WHERE customer_id = $1
 `
 
-// Deletes a customer by ID
+// OBS! Completely deletes a customer by customer_id
 func (q *Queries) DeleteCustomer(ctx context.Context, customerID interface{}) error {
 	_, err := q.db.Exec(ctx, deleteCustomer, customerID)
 	return err
 }
 
 const getCustomer = `-- name: GetCustomer :one
-SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 FROM customers
 WHERE customer_id = $1
 `
@@ -154,12 +156,14 @@ func (q *Queries) GetCustomer(ctx context.Context, customerID interface{}) (Cust
 		&i.Country,
 		&i.Phone,
 		&i.Fax,
+		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }
 
 const listCustomers = `-- name: ListCustomers :many
-SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 FROM customers
 ORDER BY company_name
 LIMIT $1 OFFSET $2
@@ -192,6 +196,8 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 			&i.Country,
 			&i.Phone,
 			&i.Fax,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -204,7 +210,7 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 }
 
 const listCustomersByCity = `-- name: ListCustomersByCity :many
-SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 FROM customers
 WHERE city = $1
 ORDER BY company_name
@@ -232,6 +238,8 @@ func (q *Queries) ListCustomersByCity(ctx context.Context, city pgtype.Text) ([]
 			&i.Country,
 			&i.Phone,
 			&i.Fax,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -244,7 +252,7 @@ func (q *Queries) ListCustomersByCity(ctx context.Context, city pgtype.Text) ([]
 }
 
 const listCustomersByCountry = `-- name: ListCustomersByCountry :many
-SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 FROM customers
 WHERE country = $1
 ORDER BY company_name
@@ -272,6 +280,8 @@ func (q *Queries) ListCustomersByCountry(ctx context.Context, country pgtype.Tex
 			&i.Country,
 			&i.Phone,
 			&i.Fax,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -283,8 +293,36 @@ func (q *Queries) ListCustomersByCountry(ctx context.Context, country pgtype.Tex
 	return items, nil
 }
 
+const listDistinctCountries = `-- name: ListDistinctCountries :many
+SELECT DISTINCT country
+FROM customers
+WHERE country IS NOT NULL
+ORDER BY country
+`
+
+// Returns all distinct countries in the customers table
+func (q *Queries) ListDistinctCountries(ctx context.Context) ([]pgtype.Text, error) {
+	rows, err := q.db.Query(ctx, listDistinctCountries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Text{}
+	for rows.Next() {
+		var country pgtype.Text
+		if err := rows.Scan(&country); err != nil {
+			return nil, err
+		}
+		items = append(items, country)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchCustomersByCompanyName = `-- name: SearchCustomersByCompanyName :many
-SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 FROM customers
 WHERE company_name ILIKE '%' || $1 || '%'
 ORDER BY company_name
@@ -312,6 +350,8 @@ func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, dollar_1 pgt
 			&i.Country,
 			&i.Phone,
 			&i.Fax,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -324,7 +364,7 @@ func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, dollar_1 pgt
 }
 
 const searchCustomersByContactName = `-- name: SearchCustomersByContactName :many
-SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+SELECT customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 FROM customers
 WHERE contact_name ILIKE '%' || $1 || '%'
 ORDER BY contact_name
@@ -352,6 +392,8 @@ func (q *Queries) SearchCustomersByContactName(ctx context.Context, dollar_1 pgt
 			&i.Country,
 			&i.Phone,
 			&i.Fax,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -361,6 +403,35 @@ func (q *Queries) SearchCustomersByContactName(ctx context.Context, dollar_1 pgt
 		return nil, err
 	}
 	return items, nil
+}
+
+const toggleCustomerActiveStatus = `-- name: ToggleCustomerActiveStatus :one
+UPDATE customers
+SET active = NOT active
+WHERE customer_id = $1
+RETURNING customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
+`
+
+// Toggles the active status of a customer by ID
+func (q *Queries) ToggleCustomerActiveStatus(ctx context.Context, customerID interface{}) (Customer, error) {
+	row := q.db.QueryRow(ctx, toggleCustomerActiveStatus, customerID)
+	var i Customer
+	err := row.Scan(
+		&i.CustomerID,
+		&i.CompanyName,
+		&i.ContactName,
+		&i.ContactTitle,
+		&i.Address,
+		&i.City,
+		&i.Region,
+		&i.PostalCode,
+		&i.Country,
+		&i.Phone,
+		&i.Fax,
+		&i.CreatedAt,
+		&i.Active,
+	)
+	return i, err
 }
 
 const updateCustomer = `-- name: UpdateCustomer :one
@@ -377,7 +448,7 @@ SET
   phone = $10,
   fax = $11
 WHERE customer_id = $1
-RETURNING customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax
+RETURNING customer_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, fax, created_at, active
 `
 
 type UpdateCustomerParams struct {
@@ -422,6 +493,8 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		&i.Country,
 		&i.Phone,
 		&i.Fax,
+		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }

@@ -185,7 +185,7 @@ func (q *Queries) ListCustomerDemographicsByCustomer(ctx context.Context, custom
 }
 
 const listCustomersByDemographic = `-- name: ListCustomersByDemographic :many
-SELECT c.customer_id, c.company_name, c.contact_name, c.contact_title, c.address, c.city, c.region, c.postal_code, c.country, c.phone, c.fax
+SELECT c.customer_id, c.company_name, c.contact_name, c.contact_title, c.address, c.city, c.region, c.postal_code, c.country, c.phone, c.fax, c.created_at, c.active
 FROM customer_customer_demo ccd
 JOIN customers c ON ccd.customer_id = c.customer_id
 WHERE ccd.customer_type_id = $1
@@ -214,6 +214,8 @@ func (q *Queries) ListCustomersByDemographic(ctx context.Context, customerTypeID
 			&i.Country,
 			&i.Phone,
 			&i.Fax,
+			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
