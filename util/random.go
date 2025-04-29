@@ -1,10 +1,10 @@
 package util
 
 import (
-	"fmt"
 	"math/rand"
 	"strings"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -38,31 +38,31 @@ func RandomString(n int, capitalLetters bool) string {
 	return sb.String()
 }
 
-func RandomPgTypeString(n int, capitalLetters bool) pgtype.Text {
+// func RandomPgTypeString(n int, capitalLetters bool) pgtype.Text {
 
-	var sb strings.Builder
-	if capitalLetters {
+// 	var sb strings.Builder
+// 	if capitalLetters {
 
-		k := len(alphabetCapital)
-		for i := 0; i < n; i++ {
-			c := alphabetCapital[rand.Intn(k)]
-			sb.WriteByte(c)
-		}
-	} else {
+// 		k := len(alphabetCapital)
+// 		for i := 0; i < n; i++ {
+// 			c := alphabetCapital[rand.Intn(k)]
+// 			sb.WriteByte(c)
+// 		}
+// 	} else {
 
-		k := len(alphabet)
-		for i := 0; i < n; i++ {
-			c := alphabet[rand.Intn(k)]
-			sb.WriteByte(c)
-		}
+// 		k := len(alphabet)
+// 		for i := 0; i < n; i++ {
+// 			c := alphabet[rand.Intn(k)]
+// 			sb.WriteByte(c)
+// 		}
 
-	}
+// 	}
 
-	return pgtype.Text{
-		String: sb.String(),
-		Valid:  true,
-	}
-}
+// 	return pgtype.Text{
+// 		String: sb.String(),
+// 		Valid:  true,
+// 	}
+// }
 
 func FormatIntoPgTypeText(text string) pgtype.Text {
 	return pgtype.Text{
@@ -71,7 +71,52 @@ func FormatIntoPgTypeText(text string) pgtype.Text {
 	}
 }
 
-func GetRandomCountry() pgtype.Text {
+func RandomContactName() pgtype.Text {
+	name := gofakeit.Name()
+	return pgtype.Text{
+		String: name,
+		Valid:  true,
+	}
+
+}
+
+func RandomAddress() *gofakeit.AddressInfo {
+	address := gofakeit.Address()
+	return address
+
+}
+
+func RandomCompanyName() string {
+	company := gofakeit.Company()
+	return company
+}
+
+func RandomContactTitle() pgtype.Text {
+	contactTitles := []string{
+		"Accounting Manager",
+		"Assistant Sales Agent",
+		"Assistant Sales Representative",
+		"Marketing Assistant",
+		"Marketing Manager",
+		"Order Administrator",
+		"Owner",
+		"Owner/Marketing Assistant",
+		"Sales Agent",
+		"Sales Associate",
+		"Sales Manager",
+		"Sales Representative",
+	}
+
+	randomIndex := rand.Intn(len(contactTitles))
+	contactTitle := contactTitles[randomIndex]
+
+	return pgtype.Text{
+		String: contactTitle,
+		Valid:  true,
+	}
+}
+
+func RandomCountry() pgtype.Text {
 	countries := []string{
 		"Argentina", "Austria", "Belgium", "Brazil", "Canada",
 		"Denmark", "Finland", "France", "Germany", "Ireland",
@@ -88,25 +133,51 @@ func GetRandomCountry() pgtype.Text {
 	}
 }
 
-func RandomPhoneNumber() pgtype.Text {
+func RandomRegion() pgtype.Text {
+	regions := []string{
+		"AK",
+		"BC",
+		"CA",
+		"Co. Cork",
+		"DF",
+		"ID",
+		"Isle of Wight",
+		"Lara",
+		"MT",
+		"NM",
+		"Nueva Esparta",
+		"OR",
+		"Québec",
+		"RJ",
+		"SP",
+		"Táchira",
+		"WA",
+		"WY",
+	}
 
-	areaCode := rand.Intn(900) + 100  // 100-999
-	prefix := rand.Intn(900) + 100    // 100-999
-	lineNum := rand.Intn(9000) + 1000 // 1000-9999
-
-	// Format the phone number
-	phone := fmt.Sprintf("%d-%d-%d", areaCode, prefix, lineNum)
+	randomIndex := rand.Intn(len(regions))
+	region := regions[randomIndex]
 
 	return pgtype.Text{
-		String: phone,
+		String: region,
 		Valid:  true,
 	}
 }
 
-func RandomMoney() int64 {
-	return RandomInt(0, 1000)
+func RandomPhoneNumber() pgtype.Text {
+
+	phone := gofakeit.Phone()
+	return pgtype.Text{
+		String: phone,
+		Valid:  true,
+	}
+
 }
 
-func RandomEmail(name string) string {
-	return fmt.Sprintf("%s@email.com", name)
+func RandomEmail() pgtype.Text {
+	email := gofakeit.Email()
+	return pgtype.Text{
+		String: email,
+		Valid:  true,
+	}
 }

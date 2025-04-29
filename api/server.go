@@ -34,8 +34,11 @@ func (server *Server) setupRouter() {
 	}
 
 	router.POST("/customer", server.createCustomer)
+	router.GET("/customers/list", server.listCustomers)
 	router.GET("/customer/:customer_id", server.getCustomer)
-	router.GET("/customers", server.listCustomers)
+	router.GET("/customer/company", server.searchCustomersByCompanyName)
+	router.GET("/customer/city", server.listCustomersByCity)
+	router.POST("/customer/delete/:customer_id", server.deleteCustomer)
 
 	server.router = router
 }

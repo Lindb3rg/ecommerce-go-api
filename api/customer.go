@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	db "ecommerce-go-api/db/sqlc"
+	"ecommerce-go-api/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -20,7 +21,7 @@ type createCustomerRequest struct {
 	Region       pgtype.Text `json:"region"`
 	PostalCode   pgtype.Text `json:"postal_code"`
 	Country      pgtype.Text `json:"country"`
-	Phone        pgtype.Text `json:"phone" binding:"required"`
+	Phone        pgtype.Text `json:"phone"`
 	Fax          pgtype.Text `json:"fax"`
 }
 
@@ -61,7 +62,7 @@ func (server *Server) createCustomer(ctx *gin.Context) {
 }
 
 type getCustomerRequest struct {
-	ID int64 `uri:"customer_id" binding:"required"`
+	ID string `uri:"customer_id" binding:"required"`
 }
 
 func (server *Server) getCustomer(ctx *gin.Context) {
@@ -85,6 +86,31 @@ func (server *Server) getCustomer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, customer)
 }
 
+type deleteCustomerRequest struct {
+	ID string `uri:"customer_id" binding:"required"`
+}
+
+func (server *Server) deleteCustomer(ctx *gin.Context) {
+	var req deleteCustomerRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := server.store.DeleteCustomer(ctx, req.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, "Deleted customer")
+}
+
 type listCustomerRequest struct {
 	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
@@ -105,6 +131,52 @@ func (server *Server) listCustomers(ctx *gin.Context) {
 	}
 
 	customers, err := server.store.ListCustomers(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, customers)
+}
+
+type searchCustomersByCompanyNameRequest struct {
+	CompanyName string `form:"company_name" binding:"required"`
+}
+
+func (server *Server) searchCustomersByCompanyName(ctx *gin.Context) {
+	var req searchCustomersByCompanyNameRequest
+
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	companyNamePgType := util.FormatIntoPgTypeText(req.CompanyName)
+
+	customers, err := server.store.SearchCustomersByCompanyName(ctx, companyNamePgType)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, customers)
+}
+
+type listCustomersByCityRequest struct {
+	City string `form:"city" binding:"required"`
+}
+
+func (server *Server) listCustomersByCity(ctx *gin.Context) {
+	var req listCustomersByCityRequest
+
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	cityPgType := util.FormatIntoPgTypeText(req.City)
+
+	customers, err := server.store.ListCustomersByCity(ctx, cityPgType)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

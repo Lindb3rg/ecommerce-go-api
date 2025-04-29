@@ -10,21 +10,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createRandomCustomer(t *testing.T) Customer {
+type ManualControlParams struct {
+	City    *pgtype.Text
+	Country *pgtype.Text
+}
+
+func createRandomCustomer(t *testing.T, manualControl *ManualControlParams) Customer {
+
+	address := util.RandomAddress()
 
 	arg := CreateCustomerParams{
 
 		CustomerID:   util.RandomString(5, true),
-		CompanyName:  util.RandomString(10, false),
-		ContactName:  util.RandomPgTypeString(8, false),
-		ContactTitle: util.RandomPgTypeString(6, false),
-		Address:      util.RandomPgTypeString(6, false),
-		City:         util.RandomPgTypeString(10, false),
-		Region:       util.RandomPgTypeString(6, false),
-		PostalCode:   util.RandomPgTypeString(6, false),
-		Country:      util.GetRandomCountry(),
+		CompanyName:  util.RandomCompanyName(),
+		ContactName:  util.RandomContactName(),
+		ContactTitle: util.RandomContactTitle(),
+		Address:      util.FormatIntoPgTypeText(address.Street),
+		Region:       util.RandomRegion(),
+		PostalCode:   util.FormatIntoPgTypeText(address.Zip),
 		Phone:        util.RandomPhoneNumber(),
-		Fax:          util.RandomPgTypeString(6, false),
+		Fax:          util.RandomPhoneNumber(),
+	}
+
+	if manualControl != nil {
+
+		if manualControl.City != nil {
+			arg.City = *manualControl.City
+		} else {
+			arg.City = util.FormatIntoPgTypeText(address.City)
+		}
+
+		if manualControl.Country != nil {
+			arg.Country = *manualControl.Country
+		} else {
+			arg.Country = util.FormatIntoPgTypeText(address.Country)
+		}
+	} else {
+
+		arg.City = util.FormatIntoPgTypeText(address.City)
+		arg.Country = util.FormatIntoPgTypeText(address.Country)
 	}
 
 	customer, err := testStore.CreateCustomer(context.Background(), arg)
@@ -47,11 +71,11 @@ func createRandomCustomer(t *testing.T) Customer {
 }
 
 func TestCreateCustomer(t *testing.T) {
-	createRandomCustomer(t)
+	createRandomCustomer(t, nil)
 }
 
 func TestGetCustomer(t *testing.T) {
-	customer1 := createRandomCustomer(t)
+	customer1 := createRandomCustomer(t, nil)
 	customer2, err := testStore.GetCustomer(context.Background(), customer1.CustomerID)
 	require.NoError(t, err)
 	require.NotEmpty(t, customer2)
@@ -72,20 +96,21 @@ func TestGetCustomer(t *testing.T) {
 
 func TestUpdateCustomer(t *testing.T) {
 
-	customer1 := createRandomCustomer(t)
+	customer1 := createRandomCustomer(t, nil)
+	address := util.RandomAddress()
 	arg := UpdateCustomerParams{
 
 		CustomerID:   customer1.CustomerID,
-		CompanyName:  util.RandomString(10, false),
-		ContactName:  util.RandomPgTypeString(8, false),
-		ContactTitle: util.RandomPgTypeString(6, false),
-		Address:      util.RandomPgTypeString(6, false),
-		City:         util.RandomPgTypeString(10, false),
-		Region:       util.RandomPgTypeString(6, false),
-		PostalCode:   util.RandomPgTypeString(6, false),
-		Country:      util.RandomPgTypeString(6, false),
+		CompanyName:  util.RandomCompanyName(),
+		ContactName:  util.RandomContactName(),
+		ContactTitle: util.RandomContactTitle(),
+		Address:      util.FormatIntoPgTypeText(address.Street),
+		City:         util.FormatIntoPgTypeText(address.City),
+		Region:       util.RandomRegion(),
+		PostalCode:   util.FormatIntoPgTypeText(address.Zip),
+		Country:      util.FormatIntoPgTypeText(address.Country),
 		Phone:        util.RandomPhoneNumber(),
-		Fax:          util.RandomPgTypeString(6, false),
+		Fax:          util.RandomPhoneNumber(),
 	}
 
 	customer2, err := testStore.UpdateCustomer(context.Background(), arg)
@@ -107,12 +132,58 @@ func TestUpdateCustomer(t *testing.T) {
 
 }
 
-func TestSearchCustomersByName(t *testing.T) {
+func TestDeleteCustomer(t *testing.T) {
+	customer := createRandomCustomer(t, nil)
 
-	customer := createRandomCustomer(t)
+	err := testStore.DeleteCustomer(context.Background(), customer.CustomerID)
+	require.NoError(t, err, "Failed to delete customer")
+
+	checkIfCustomerExists, err := testStore.GetCustomer(context.Background(), customer.CustomerID)
+	fmt.Println(checkIfCustomerExists)
+
+	require.Error(t, err, "Failed to check if customer has been deleted")
+	require.Empty(t, checkIfCustomerExists, "Failed to check if customer exists")
+}
+
+func TestSearchCustomersByCompanyName(t *testing.T) {
+
+	customer := createRandomCustomer(t, nil)
 	searchTerm := util.FormatIntoPgTypeText(customer.CompanyName)
 
 	customers, err := testStore.SearchCustomersByCompanyName(context.Background(), searchTerm)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, customer)
+
+	found := false
+
+	for _, c := range customers {
+		if c.CustomerID == customer.CustomerID {
+			found = true
+
+			require.Equal(t, customer.CompanyName, c.CompanyName)
+			require.Equal(t, customer.ContactName, c.ContactName)
+			require.Equal(t, customer.ContactTitle, c.ContactTitle)
+			require.Equal(t, customer.ContactTitle, c.ContactTitle)
+			require.Equal(t, customer.Address, c.Address)
+			require.Equal(t, customer.City, c.City)
+			require.Equal(t, customer.Region, c.Region)
+			require.Equal(t, customer.PostalCode, c.PostalCode)
+			require.Equal(t, customer.Country, c.Country)
+			require.Equal(t, customer.Phone, c.Phone)
+			require.Equal(t, customer.Fax, c.Fax)
+
+		}
+	}
+	require.True(t, found, "Created customer not found in search results")
+
+}
+
+func TestSearchCustomersByContactName(t *testing.T) {
+
+	customer := createRandomCustomer(t, nil)
+
+	customers, err := testStore.SearchCustomersByContactName(context.Background(), customer.ContactName)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, customer)
@@ -158,6 +229,7 @@ func TestCountAllCustomers(t *testing.T) {
 }
 
 func TestCountCustomersByCountry(t *testing.T) {
+
 	sqlStore, ok := testStore.(*SQLStore)
 	require.True(t, ok, "testStore is not a *SQLStore")
 
@@ -192,7 +264,7 @@ func TestListCustomers(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 
-		createRandomCustomer(t)
+		createRandomCustomer(t, nil)
 
 	}
 
@@ -215,9 +287,131 @@ func TestListCustomers(t *testing.T) {
 
 }
 
+func TestListCustomersByCountry(t *testing.T) {
+
+	sqlStore, ok := testStore.(*SQLStore)
+	require.True(t, ok, "testStore is not a *SQLStore")
+
+	country := "USA"
+	searchTerm := util.FormatIntoPgTypeText(country)
+
+	rows, err := sqlStore.connPool.Query(context.Background(),
+		"SELECT * FROM customers WHERE country = $1 ORDER BY company_name", searchTerm)
+	require.NoError(t, err)
+	defer rows.Close()
+
+	var expectedCustomers []Customer
+	for rows.Next() {
+		var customer Customer
+		err := rows.Scan(
+			&customer.CustomerID,
+			&customer.CompanyName,
+			&customer.ContactName,
+			&customer.ContactTitle,
+			&customer.Address,
+			&customer.City,
+			&customer.Region,
+			&customer.PostalCode,
+			&customer.Country,
+			&customer.Phone,
+			&customer.Fax,
+			&customer.CreatedAt,
+			&customer.Active,
+		)
+		require.NoError(t, err)
+		expectedCustomers = append(expectedCustomers, customer)
+	}
+	require.NoError(t, rows.Err())
+
+	result, err := testStore.ListCustomersByCountry(context.Background(), searchTerm)
+	require.NoError(t, err)
+
+	require.Equal(t, len(expectedCustomers), len(result), "Result count doesn't match expected count")
+
+	for i, expected := range expectedCustomers {
+		actual := result[i]
+		require.Equal(t, expected.CustomerID, actual.CustomerID)
+		require.Equal(t, expected.CompanyName, actual.CompanyName)
+		require.Equal(t, expected.ContactName, actual.ContactName)
+		require.Equal(t, expected.ContactTitle, actual.ContactTitle)
+		require.Equal(t, expected.Address, actual.Address)
+		require.Equal(t, expected.City, actual.City)
+		require.Equal(t, expected.Region, actual.Region)
+		require.Equal(t, expected.PostalCode, actual.PostalCode)
+		require.Equal(t, expected.Country, actual.Country)
+		require.Equal(t, expected.Phone, actual.Phone)
+		require.Equal(t, expected.Fax, actual.Fax)
+		require.Equal(t, expected.CreatedAt, actual.CreatedAt)
+		require.Equal(t, expected.Active, actual.Active)
+
+	}
+
+}
+
+func TestListCustomersByCity(t *testing.T) {
+
+	sqlStore, ok := testStore.(*SQLStore)
+	require.True(t, ok, "testStore is not a *SQLStore")
+
+	city := "London"
+	searchTerm := util.FormatIntoPgTypeText(city)
+
+	rows, err := sqlStore.connPool.Query(context.Background(),
+		"SELECT * FROM customers WHERE city = $1 ORDER BY company_name", searchTerm)
+	require.NoError(t, err)
+	defer rows.Close()
+
+	var expectedCustomers []Customer
+	for rows.Next() {
+		var customer Customer
+		err := rows.Scan(
+			&customer.CustomerID,
+			&customer.CompanyName,
+			&customer.ContactName,
+			&customer.ContactTitle,
+			&customer.Address,
+			&customer.City,
+			&customer.Region,
+			&customer.PostalCode,
+			&customer.Country,
+			&customer.Phone,
+			&customer.Fax,
+			&customer.CreatedAt,
+			&customer.Active,
+		)
+		require.NoError(t, err)
+		expectedCustomers = append(expectedCustomers, customer)
+	}
+	require.NoError(t, rows.Err())
+
+	result, err := testStore.ListCustomersByCity(context.Background(), searchTerm)
+	require.NoError(t, err)
+
+	require.Equal(t, len(expectedCustomers), len(result), "Result count doesn't match expected count")
+
+	for i, expected := range expectedCustomers {
+		actual := result[i]
+		require.Equal(t, expected.CustomerID, actual.CustomerID)
+		require.Equal(t, expected.CompanyName, actual.CompanyName)
+		require.Equal(t, expected.ContactName, actual.ContactName)
+		require.Equal(t, expected.ContactTitle, actual.ContactTitle)
+		require.Equal(t, expected.Address, actual.Address)
+		require.Equal(t, expected.City, actual.City)
+		require.Equal(t, expected.Region, actual.Region)
+		require.Equal(t, expected.PostalCode, actual.PostalCode)
+		require.Equal(t, expected.Country, actual.Country)
+		require.Equal(t, expected.Phone, actual.Phone)
+		require.Equal(t, expected.Fax, actual.Fax)
+		require.Equal(t, expected.CreatedAt, actual.CreatedAt)
+		require.Equal(t, expected.Active, actual.Active)
+
+	}
+
+}
+
 func TestToggleCustomerActiveStatus(t *testing.T) {
 	// Create a random customer
-	customer := createRandomCustomer(t)
+	customer := createRandomCustomer(t, nil)
 
 	// Store the original active status
 	originalActive := customer.Active
@@ -254,7 +448,7 @@ func TestListDistinctCountries(t *testing.T) {
 		err := rows.Scan(&country)
 		require.NoError(t, err)
 		expectedResults = append(expectedResults, country)
-		fmt.Println(country)
+
 	}
 	require.NoError(t, rows.Err())
 
