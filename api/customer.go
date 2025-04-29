@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 
@@ -12,7 +13,7 @@ import (
 )
 
 type createCustomerRequest struct {
-	CustomerID   string      `json:"customerID" binding:"required"`
+	CustomerID   string      `json:"customer_id" binding:"required"`
 	CompanyName  string      `json:"company_name" binding:"required"`
 	ContactName  pgtype.Text `json:"contact_name" binding:"required"`
 	ContactTitle pgtype.Text `json:"contact_title"`
@@ -109,6 +110,88 @@ func (server *Server) deleteCustomer(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, "Deleted customer")
+}
+
+type updateCustomerRequest struct {
+	CustomerID   string       `json:"customer_id" binding:"required"`
+	CompanyName  string       `json:"company_name"`
+	ContactName  *pgtype.Text `json:"contact_name"`
+	ContactTitle *pgtype.Text `json:"contact_title"`
+	Address      *pgtype.Text `json:"address"`
+	City         *pgtype.Text `json:"city"`
+	Region       *pgtype.Text `json:"region"`
+	PostalCode   *pgtype.Text `json:"postal_code"`
+	Country      *pgtype.Text `json:"country"`
+	Phone        *pgtype.Text `json:"phone"`
+	Fax          *pgtype.Text `json:"fax"`
+}
+
+func updateFieldIfProvided(dest *pgtype.Text, src *pgtype.Text) {
+	if src != nil {
+		*dest = *src
+	}
+}
+
+func (server *Server) updateCustomer(ctx *gin.Context) {
+	customerID := ctx.Param("customer_id")
+	if customerID == "" {
+		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("missing customer ID")))
+		return
+	}
+
+	customer, err := server.store.GetCustomer(ctx, customerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(errors.New("customer not found")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	var req updateCustomerRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Initialize arg with existing customer values
+	arg := db.UpdateCustomerParams{
+		CustomerID:   customerID,
+		CompanyName:  customer.CompanyName,
+		ContactName:  customer.ContactName,
+		ContactTitle: customer.ContactTitle,
+		Address:      customer.Address,
+		City:         customer.City,
+		Region:       customer.Region,
+		PostalCode:   customer.PostalCode,
+		Country:      customer.Country,
+		Phone:        customer.Phone,
+		Fax:          customer.Fax,
+	}
+
+	updateFieldIfProvided(&arg.ContactName, req.ContactName)
+	updateFieldIfProvided(&arg.ContactTitle, req.ContactTitle)
+	updateFieldIfProvided(&arg.Address, req.Address)
+	updateFieldIfProvided(&arg.City, req.City)
+	updateFieldIfProvided(&arg.Region, req.Region)
+	updateFieldIfProvided(&arg.PostalCode, req.PostalCode)
+	updateFieldIfProvided(&arg.Country, req.Country)
+	updateFieldIfProvided(&arg.Phone, req.Phone)
+	updateFieldIfProvided(&arg.Fax, req.Fax)
+
+	updatedCustomer, err := server.store.UpdateCustomer(ctx, arg)
+	if err != nil {
+		errCode := db.ErrorCode(err)
+		if errCode == db.ForeignKeyViolation || errCode == db.UniqueViolation {
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, updatedCustomer)
 }
 
 type listCustomerRequest struct {

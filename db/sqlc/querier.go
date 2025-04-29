@@ -309,7 +309,7 @@ type Querier interface {
 	ToggleCustomerActiveStatus(ctx context.Context, customerID interface{}) (Customer, error)
 	// Updates a category by ID
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
-	// Updates a customer by ID
+	// Updates specified columns for a customer, leaves others unchanged
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (Customer, error)
 	// Updates a customer demographic by type ID
 	UpdateCustomerDemographic(ctx context.Context, arg UpdateCustomerDemographicParams) (CustomerDemographic, error)

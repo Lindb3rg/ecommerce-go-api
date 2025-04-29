@@ -32,21 +32,26 @@ INSERT INTO customers (
 RETURNING *;
 
 -- name: UpdateCustomer :one
--- Updates a customer by ID
+-- Updates specified columns for a customer, leaves others unchanged
 UPDATE customers
 SET
-  company_name = $2,
-  contact_name = $3,
-  contact_title = $4,
-  address = $5,
-  city = $6,
-  region = $7,
-  postal_code = $8,
-  country = $9,
-  phone = $10,
-  fax = $11
+  company_name = COALESCE($2, company_name),
+  contact_name = COALESCE($3, contact_name),
+  contact_title = COALESCE($4, contact_title),
+  address = COALESCE($5, address),
+  city = COALESCE($6, city),
+  region = COALESCE($7, region),
+  postal_code = COALESCE($8, postal_code),
+  country = COALESCE($9, country),
+  phone = COALESCE($10, phone),
+  fax = COALESCE($11, fax)
 WHERE customer_id = $1
 RETURNING *;
+
+
+
+
+
 
 -- name: DeleteCustomer :exec
 -- OBS! Completely deletes a customer by customer_id

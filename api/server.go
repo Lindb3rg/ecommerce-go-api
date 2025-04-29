@@ -14,7 +14,6 @@ type Server struct {
 	router *gin.Engine
 }
 
-// NewServer creates a new HTTP server and set up routing.
 func NewServer(config util.Config, store db.Store) (*Server, error) {
 
 	server := &Server{
@@ -33,17 +32,17 @@ func (server *Server) setupRouter() {
 		log.Fatal("Could not establish proxy connection: ", errorResponse(err))
 	}
 
-	router.POST("/customer", server.createCustomer)
-	router.GET("/customers/list", server.listCustomers)
-	router.GET("/customer/:customer_id", server.getCustomer)
-	router.GET("/customer/company", server.searchCustomersByCompanyName)
-	router.GET("/customer/city", server.listCustomersByCity)
-	router.POST("/customer/delete/:customer_id", server.deleteCustomer)
+	router.POST("/api/customer", server.createCustomer)
+	router.GET("/api/customers/list", server.listCustomers)
+	router.GET("/api/customer/:customer_id", server.getCustomer)
+	router.PUT("/api/customer/:customer_id", server.updateCustomer)
+	router.GET("/api/customer/company", server.searchCustomersByCompanyName)
+	router.GET("/api/customer/city", server.listCustomersByCity)
+	router.DELETE("/api/customer/:customer_id", server.deleteCustomer)
 
 	server.router = router
 }
 
-// Start runs the HTTP server on a specific address.
 func (server *Server) Start(address string) error {
 	return server.router.Run(address)
 }
